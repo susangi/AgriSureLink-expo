@@ -3,39 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { AntDesign, MaterialCommunityIcons } from "@expo/vector-icons";
 
-export default function DashboardScreen({ navigation }) {
+export default function AlertsScreen({ navigation }) {
   return (
     <LinearGradient
       colors={["#3FA34D", "#00BFFF"]} // Agri Green to Sky Blue
       style={styles.container}
-    >
-      {/* Title */}
-      <Text style={styles.title}>AgriSureLink</Text>
-      <Text style={styles.subtitle}>Your Farm’s Safety at a Glance</Text>
-
-      {/* Risk Meter Placeholder */}
-      <View style={styles.riskMeter}>
-        <MaterialCommunityIcons name="speedometer" size={80} color="#fff" />
-        <Text style={styles.riskText}>Risk Level: Moderate</Text>
-      </View>
-
-      {/* Submit Claim */}
-      <TouchableOpacity
-        style={styles.claimButton}
-        onPress={() => navigation.navigate("Claims")}
-      >
-        <AntDesign name="form" size={20} color="white" />
-        <Text style={styles.claimButtonText}>Submit Claim</Text>
-      </TouchableOpacity>
-
-      {/* Alerts Section */}
-      <View style={styles.alertBox}>
-        <Text style={styles.alertTitle}>⚠ Latest Alert</Text>
-        <Text style={styles.alertText}>
-          Storm Warning: High winds expected tomorrow.
-        </Text>
-      </View>
-    </LinearGradient>
+    ></LinearGradient>
   );
 }
 

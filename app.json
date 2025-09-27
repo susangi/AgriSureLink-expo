@@ -12,6 +12,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#388E3C"
     },
+    "scheme": "agrisurelink", 
     "ios": {
       "supportsTablet": true
     },

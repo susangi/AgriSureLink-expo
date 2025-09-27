@@ -1,15 +1,26 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from "react-native";
-import { auth } from "../services/firebase/config"; 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  Image,
+} from "react-native";
+import { auth } from "../services/firebase/config";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { AntDesign } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import CustomAlert from "../components/Alert";
+import { useAlert } from "../context/AlertContext";
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function SignInScreen({ navigation }) {
+  const { showAlert, alert } = useAlert();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -20,17 +31,17 @@ export default function SignInScreen({ navigation }) {
   React.useEffect(() => {
     if (response?.type === "success") {
       const { id_token } = response.params;
-      Alert.alert("Google Sign-In Success", "Token received.");
+      showAlert("success", "Google Sign-In Success", "Token received.");
     }
   }, [response]);
 
   const handleLogin = async () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      Alert.alert("Login Success", "Welcome back!");
-      navigation.replace("Dashboard");
+      showAlert("success", "Success", "Welcome back to AgriSureLink!");
+      navigation.replace("Main");
     } catch (error) {
-      Alert.alert("Login Error", error.message);
+      showAlert("error", "Error", "Invalid Credentials.");
     }
   };
 
@@ -41,14 +52,16 @@ export default function SignInScreen({ navigation }) {
       end={{ x: 1, y: 1 }}
       style={styles.container}
     >
-    {/* <View style={styles.container}> */}
+      {/* <View style={styles.container}> */}
       {/* App Logo */}
       <Image
         source={require("../../assets/logo.png")} // put your logo in assets folder
         style={styles.logoImage}
       />
       {/* <Text style={styles.logo}>AgriSureLink</Text> */}
-      <Text style={styles.subtitle}>Secure your farm, grow with confidence</Text>
+      <Text style={styles.subtitle}>
+        Secure your farm, grow with confidence
+      </Text>
 
       <TextInput
         placeholder="Email"
@@ -84,7 +97,9 @@ export default function SignInScreen({ navigation }) {
       <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
         <Text style={styles.signupLink}>Don’t have an account? Sign Up</Text>
       </TouchableOpacity>
-    {/* </View> */}
+      {/* </View> */}
+
+      {alert && <CustomAlert type={alert.type} message={alert.message} />}
     </LinearGradient>
   );
 }
@@ -163,4 +178,3 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
 });
-

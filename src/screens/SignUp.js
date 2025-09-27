@@ -11,23 +11,26 @@ import {
 import { auth } from "../services/firebase/config";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { LinearGradient } from "expo-linear-gradient";
+import CustomAlert from "../components/Alert";
+import { useAlert } from "../context/AlertContext";
 
 export default function SignUpScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const { showAlert, alert } = useAlert();
 
   const handleSignUp = async () => {
     if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
+      Alert.alert("error", "Passwords do not match");
       return;
     }
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      Alert.alert("Success", "Account created successfully!");
-      navigation.replace("Dashboard"); // Go to Dashboard after signup
+      showAlert("success", "Success", "Account created successfully!");
+      navigation.replace("Main"); // Go to Dashboard after signup
     } catch (error) {
-      Alert.alert("Sign Up Error", error.message);
+      showAlert("error", "Error", "Invalid Credentials.");
     }
   };
 
@@ -39,10 +42,7 @@ export default function SignUpScreen({ navigation }) {
       style={styles.container}
     >
       {/* Logo */}
-      <Image
-        source={require("../../assets/logo.png")}
-        style={styles.logo}
-      />
+      <Image source={require("../../assets/logo.png")} style={styles.logo} />
       <Text style={styles.title}>Create Account</Text>
       <Text style={styles.subtitle}>Join AgriSureLink today!</Text>
 
@@ -77,12 +77,14 @@ export default function SignUpScreen({ navigation }) {
       </TouchableOpacity>
 
       {/* Redirect to Sign In */}
-      <TouchableOpacity onPress={() => navigation.navigate("Auth")}>
+      <TouchableOpacity onPress={() => navigation.navigate("SignIn")}>
         <Text style={styles.signinLink}>
           Already have an account?{" "}
           <Text style={{ fontWeight: "bold" }}>Login</Text>
         </Text>
       </TouchableOpacity>
+
+      {alert && <CustomAlert type={alert.type} message={alert.message} />}
     </LinearGradient>
   );
 }
