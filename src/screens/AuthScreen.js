@@ -1,54 +1,166 @@
 import React, { useState } from "react";
-import { View, TextInput, Button, Text, StyleSheet } from "react-native";
-import { login, register } from "../services/firebase/auth";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from "react-native";
+import { auth } from "../services/firebase/config"; 
+import { signInWithEmailAndPassword } from "firebase/auth";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
+import { AntDesign } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
-export default function AuthScreen({ navigation }) {
+WebBrowser.maybeCompleteAuthSession();
+
+export default function SignInScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+  });
+
+  React.useEffect(() => {
+    if (response?.type === "success") {
+      const { id_token } = response.params;
+      Alert.alert("Google Sign-In Success", "Token received.");
+    }
+  }, [response]);
 
   const handleLogin = async () => {
     try {
-      await login(email, password);
+      await signInWithEmailAndPassword(auth, email, password);
+      Alert.alert("Login Success", "Welcome back!");
       navigation.replace("Dashboard");
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handleRegister = async () => {
-    try {
-      await register(email, password);
-      navigation.replace("Dashboard");
-    } catch (err) {
-      setError(err.message);
+    } catch (error) {
+      Alert.alert("Login Error", error.message);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={["#3FA34D", "#00BFFF"]} // Agri Green to Sky Blue
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.container}
+    >
+    {/* <View style={styles.container}> */}
+      {/* App Logo */}
+      <Image
+        source={require("../../assets/logo.png")} // put your logo in assets folder
+        style={styles.logoImage}
+      />
+      {/* <Text style={styles.logo}>AgriSureLink</Text> */}
+      <Text style={styles.subtitle}>Secure your farm, grow with confidence</Text>
+
       <TextInput
-        style={styles.input}
         placeholder="Email"
         value={email}
         onChangeText={setEmail}
+        style={styles.input}
+        placeholderTextColor="#777"
       />
       <TextInput
-        style={styles.input}
         placeholder="Password"
-        secureTextEntry
         value={password}
         onChangeText={setPassword}
+        secureTextEntry
+        style={styles.input}
+        placeholderTextColor="#777"
       />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title="Login" onPress={handleLogin} />
-      <Button title="Register" onPress={handleRegister} />
-    </View>
+
+      <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
+        <Text style={styles.loginText}>Login</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.orText}>── OR ──</Text>
+
+      <TouchableOpacity
+        style={styles.googleBtn}
+        disabled={!request}
+        onPress={() => promptAsync()}
+      >
+        <AntDesign name="google" size={20} color="white" />
+        <Text style={styles.googleText}>Sign in with Google</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
+        <Text style={styles.signupLink}>Don’t have an account? Sign Up</Text>
+      </TouchableOpacity>
+    {/* </View> */}
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, marginTop: 50 },
-  input: { borderWidth: 1, padding: 10, marginBottom: 10 },
-  error: { color: "red", marginBottom: 10 },
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  logoImage: {
+    width: 100,
+    height: 100,
+    marginBottom: 10,
+    resizeMode: "contain",
+  },
+  logo: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#388E3C", // Agri Green
+    marginBottom: 5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#0288D1", // Sky Blue
+    marginBottom: 30,
+    textAlign: "center",
+  },
+  input: {
+    width: "100%",
+    backgroundColor: "#F5F5F5",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 15,
+    fontSize: 16,
+    color: "#212121",
+  },
+  loginBtn: {
+    width: "100%",
+    backgroundColor: "#388E3C", // Agri Green
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  loginText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  orText: {
+    marginVertical: 10,
+    fontSize: 14,
+    color: "#555",
+  },
+  googleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    backgroundColor: "#0288D1", // Sky Blue
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  googleText: {
+    color: "white",
+    fontSize: 16,
+    marginLeft: 10,
+    fontWeight: "bold",
+  },
+  signupLink: {
+    color: "#0288D1",
+    fontSize: 14,
+    marginTop: 15,
+  },
 });
+
