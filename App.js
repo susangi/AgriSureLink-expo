@@ -11,6 +11,7 @@ import ClaimsScreen from "./src/screens/ClaimsScreen";
 import AlertsScreen from "./src/screens/AlertsScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import { AlertProvider } from "./src/context/AlertContext";
+import { UserProvider } from "./src/context/UserContext";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -46,14 +47,16 @@ function MainTabs() {
 export default function App() {
   return (
     <AlertProvider>
-      <NavigationContainer theme={AppTheme}>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="SignIn" component={AuthScreen} />
-          <Stack.Screen name="SignUp" component={SignUpScreen} />
-          {/* Tabs grouped under Main */}
-          <Stack.Screen name="Main" component={MainTabs} />
-        </Stack.Navigator>
-      </NavigationContainer>
+      <UserProvider>
+        <NavigationContainer theme={AppTheme}>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="SignIn" component={AuthScreen} />
+            <Stack.Screen name="SignUp" component={SignUpScreen} />
+            {/* Tabs grouped under Main */}
+            <Stack.Screen name="Main" component={MainTabs} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </UserProvider>
     </AlertProvider>
   );
 }

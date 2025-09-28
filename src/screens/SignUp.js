@@ -21,6 +21,15 @@ export default function SignUpScreen({ navigation }) {
   const { showAlert, alert } = useAlert();
 
   const handleSignUp = async () => {
+    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
+      showAlert(
+        "warning",
+        "Missing Fields",
+        "Please enter both email, password and confirm password."
+      );
+      return;
+    }
+
     if (password !== confirmPassword) {
       Alert.alert("error", "Passwords do not match");
       return;

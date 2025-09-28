@@ -16,10 +16,12 @@ import { AntDesign } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import CustomAlert from "../components/Alert";
 import { useAlert } from "../context/AlertContext";
+import { useUser } from "../context/UserContext";
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function SignInScreen({ navigation }) {
+  const { setUser } = useUser(); // 👈 from context
   const { showAlert, alert } = useAlert();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,7 +39,26 @@ export default function SignInScreen({ navigation }) {
 
   const handleLogin = async () => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      if (!email.trim() || !password.trim()) {
+        showAlert(
+          "warning",
+          "Missing Fields",
+          "Please enter both email and password."
+        );
+        return;
+      }
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const firebaseUser = userCredential.user;
+      // Save in context
+      setUser({
+        name: firebaseUser.displayName || "Farmer",
+        email: firebaseUser.email,
+        uid: firebaseUser.uid,
+      });
       showAlert("success", "Success", "Welcome back to AgriSureLink!");
       navigation.replace("Main");
     } catch (error) {
@@ -99,7 +120,13 @@ export default function SignInScreen({ navigation }) {
       </TouchableOpacity>
       {/* </View> */}
 
-      {alert && <CustomAlert type={alert.type} message={alert.message} />}
+      {alert && (
+        <CustomAlert
+          type={alert.type} // success, error, warning
+          title={alert.title} // added
+          message={alert.message}
+        />
+      )}
     </LinearGradient>
   );
 }
