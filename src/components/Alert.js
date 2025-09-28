@@ -26,17 +26,10 @@ export default function CustomAlert({
             name={icon}
             size={40}
             color={color}
-            style={{ marginBottom: 10 }}
+            style={{ marginBottom: 5 }}
           />
           <Text style={[styles.title, { color }]}>{title}</Text>
           <Text style={[styles.message, { color }]}>{message}</Text>
-
-          <TouchableOpacity
-            style={[styles.button, { borderColor: color }]}
-            onPress={onClose}
-          >
-            <Text style={[styles.buttonText, { color }]}>OK</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -53,19 +46,19 @@ const styles = StyleSheet.create({
   alertBox: {
     width: "80%",
     borderRadius: 16,
-    padding: 20,
+    padding: 10,
     alignItems: "center",
     elevation: 5,
   },
   title: {
     fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 5,
+    marginBottom: 2,
   },
   message: {
     fontSize: 16,
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 5,
   },
   button: {
     borderWidth: 2,
@@ -74,7 +67,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   buttonText: {
-    fontSize: 16,
+    fontSize: 10,
     fontWeight: "bold",
   },
 });

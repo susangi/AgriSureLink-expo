@@ -19,6 +19,7 @@ export default function SignUpScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const { showAlert, alert } = useAlert();
+  
 
   const handleSignUp = async () => {
     if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
@@ -93,7 +94,13 @@ export default function SignUpScreen({ navigation }) {
         </Text>
       </TouchableOpacity>
 
-      {alert && <CustomAlert type={alert.type} message={alert.message} />}
+      {alert && (
+        <CustomAlert
+          type={alert.type} // success, error, warning
+          title={alert.title} // added
+          message={alert.message}
+        />
+      )}
     </LinearGradient>
   );
 }
