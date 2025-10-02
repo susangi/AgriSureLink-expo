@@ -67,7 +67,9 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
     position: "absolute",
     left: "50%",
-    transform: [{ translateX: -20 }],
+    top: 0, // optional, if you want it from top
+    borderRadius: 20, // half of width/height for a perfect circle
+    transform: [{ translateX: -20 }], // centers it horizontally
   },
   headerIcons: { flexDirection: "row", alignItems: "center", gap: 8 },
   userName: { fontSize: 16, fontWeight: "600", color: "#333", marginRight: 5 },

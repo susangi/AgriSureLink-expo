@@ -143,6 +143,7 @@ const styles = StyleSheet.create({
     height: 100,
     marginBottom: 10,
     resizeMode: "contain",
+    borderRadius: 20,
   },
   logo: {
     fontSize: 32,

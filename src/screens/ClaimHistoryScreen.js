@@ -15,14 +15,7 @@ import {
   ActivityIndicator,
   Text,
 } from "react-native-paper";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-  getDocs,
-} from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { db, auth } from "../services/firebase/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Layout from "../components/Layout";
@@ -73,7 +66,7 @@ export default function ClaimHistoryScreen({ navigation }) {
     }
   };
 
-  // Fetch claims from Firestore
+  // Fixed fetch function without unsubscribe issue
   const fetchClaims = async (isRefresh = false) => {
     if (isRefresh) {
       setRefreshing(true);
@@ -84,6 +77,8 @@ export default function ClaimHistoryScreen({ navigation }) {
     try {
       if (!auth.currentUser) {
         Alert.alert("Error", "Please sign in to view claim history");
+        setLoading(false);
+        setRefreshing(false);
         return;
       }
 
@@ -94,108 +89,42 @@ export default function ClaimHistoryScreen({ navigation }) {
       );
 
       if (isOnline) {
-        const unsubscribe = onSnapshot(
-          claimsQuery,
-          (querySnapshot) => {
-            const claimsData = [];
-            querySnapshot.forEach((doc) => {
-              claimsData.push({
-                id: doc.id,
-                ...doc.data(),
-                createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-              });
-            });
+        // Use getDocs instead of onSnapshot to avoid unsubscribe issues
+        const querySnapshot = await getDocs(claimsQuery);
+        const claimsData = [];
 
-            // Sort locally instead of using Firestore ordering
-            const sortedClaims = claimsData.sort(
-              (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-            );
+        querySnapshot.forEach((doc) => {
+          claimsData.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate?.() || new Date(),
+          });
+        });
 
-            setClaims(sortedClaims);
-            saveClaimsToStorage(sortedClaims);
-            setOfflineData(false);
-            setLoading(false);
-            setRefreshing(false);
-          },
-          (error) => {
-            console.error("Error fetching claims:", error);
-
-            // If it's an index error, try alternative approach
-            if (error.code === "failed-precondition") {
-              Alert.alert(
-                "Index Building",
-                "Database index is being created. This may take a few minutes. Using offline data for now.",
-                [{ text: "OK" }]
-              );
-            }
-
-            loadOfflineClaims();
-            setLoading(false);
-            setRefreshing(false);
-          }
+        // Sort locally instead of using Firestore ordering
+        const sortedClaims = claimsData.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
         );
 
-        return unsubscribe;
+        setClaims(sortedClaims);
+        saveClaimsToStorage(sortedClaims);
+        setOfflineData(false);
       } else {
+        // Offline mode - load from storage
         await loadOfflineClaims();
-        setLoading(false);
-        setRefreshing(false);
       }
-    } catch (error) {
-      console.error("Error in fetchClaims:", error);
-      await loadOfflineClaims();
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    const unsubscribe = fetchClaims();
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [isOnline]);
-
-  // Alternative: Use getDocs instead of onSnapshot (less real-time but more stable)
-  const fetchClaimsAlternative = async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
-    try {
-      if (!auth.currentUser) {
-        Alert.alert("Error", "Please sign in to view claim history");
-        return;
-      }
-
-      const claimsQuery = query(
-        collection(db, "claims"),
-        where("userId", "==", auth.currentUser.uid)
-      );
-
-      const querySnapshot = await getDocs(claimsQuery);
-      const claimsData = [];
-
-      querySnapshot.forEach((doc) => {
-        claimsData.push({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-        });
-      });
-
-      // Sort locally
-      const sortedClaims = claimsData.sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      );
-
-      setClaims(sortedClaims);
-      saveClaimsToStorage(sortedClaims);
-      setOfflineData(false);
     } catch (error) {
       console.error("Error fetching claims:", error);
+
+      // If it's an index error, try alternative approach
+      if (error.code === "failed-precondition") {
+        Alert.alert(
+          "Index Building",
+          "Database index is being created. This may take a few minutes. Using offline data for now.",
+          [{ text: "OK" }]
+        );
+      }
+
       await loadOfflineClaims();
     } finally {
       setLoading(false);
@@ -203,14 +132,24 @@ export default function ClaimHistoryScreen({ navigation }) {
     }
   };
 
+  useEffect(() => {
+    fetchClaims();
+  }, [isOnline]);
+
   const handleRefresh = () => {
     if (isOnline) {
-      // Use alternative method during index creation
-      fetchClaimsAlternative(true);
+      fetchClaims(true);
     } else {
       setRefreshing(false);
       Alert.alert("Offline", "Cannot refresh while offline");
     }
+  };
+
+  // Fixed back button function - removed references to non-existent variables
+  const handleBack = () => {
+    // Since this is ClaimHistory screen, we don't have form data to check
+    // Just navigate back directly
+    navigation.goBack();
   };
 
   // Test offline functionality
@@ -253,19 +192,6 @@ export default function ClaimHistoryScreen({ navigation }) {
         claims.length
       }`
     );
-  };
-
-  const simulateOfflineScenario = async () => {
-    // First, ensure we have some data online
-    if (isOnline) {
-      await fetchClaims();
-      Alert.alert(
-        "Offline Simulation Ready",
-        "Now enable airplane mode and reopen this screen to test offline functionality."
-      );
-    } else {
-      Alert.alert("Already offline", "Offline mode is active.");
-    }
   };
 
   const getStatusColor = (status) => {
@@ -323,10 +249,20 @@ export default function ClaimHistoryScreen({ navigation }) {
           />
         }
       >
+        {/* Back Button */}
+        <Button
+          mode="outlined"
+          onPress={handleBack}
+          style={styles.backButton}
+          icon="arrow-left"
+        >
+          Back
+        </Button>
+
         {/* Debug Information Panel */}
         <Card style={styles.debugCard}>
           <Card.Content>
-            <Title style={styles.debugTitle}>Debug Information</Title>
+            <Title style={styles.debugTitle}>Connection Status</Title>
             <View style={styles.debugGrid}>
               <View style={styles.debugItem}>
                 <Text style={styles.debugLabel}>Network Status:</Text>
@@ -530,6 +466,10 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     flexGrow: 1,
+  },
+  backButton: {
+    alignSelf: "flex-start",
+    marginBottom: 16,
   },
   header: {
     flexDirection: "row",
