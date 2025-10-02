@@ -10,14 +10,14 @@ export default function ClaimsScreen({ navigation }) {
         {/* Submit Claim Card */}
         <Card
           style={styles.card}
-          onPress={() => navigation.navigate("claim-create")}
+          onPress={() => navigation.navigate("claimCreate")}
         >
           <Card.Content>
             <Title>Submit a Claim</Title>
             <Paragraph>Start a new insurance claim for your package.</Paragraph>
           </Card.Content>
           <Card.Actions>
-            <Button onPress={() => navigation.navigate("claim-create")}>
+            <Button onPress={() => navigation.navigate("claimCreate")}>
               Submit
             </Button>
           </Card.Actions>

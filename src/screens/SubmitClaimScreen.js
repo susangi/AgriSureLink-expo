@@ -284,6 +284,7 @@ const styles = StyleSheet.create({
   button: {
     marginTop: 8,
     paddingVertical: 8,
+    backgroundColor: "#2E7D32",
   },
   imagePreviewContainer: {
     flexDirection: "row",
@@ -319,5 +320,6 @@ const styles = StyleSheet.create({
   simpleBackButton: {
     alignSelf: "flex-start",
     marginBottom: 10,
+    borderColor: "#2E7D32",
   },
 });
