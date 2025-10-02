@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   StyleSheet,
   Alert,
   Image,
   ScrollView,
-  Platform,
+  TouchableOpacity,
 } from "react-native";
 import { TextInput, Button, Title, Chip, Text } from "react-native-paper";
 import { db, auth } from "../services/firebase/config";
@@ -15,6 +15,7 @@ import * as FileSystem from "expo-file-system";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Layout from "../components/Layout";
 import * as Location from "expo-location";
+import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
 
 export default function SubmitClaimScreen({ navigation }) {
   const [packageName, setPackageName] = useState("");
@@ -24,12 +25,18 @@ export default function SubmitClaimScreen({ navigation }) {
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
 
-  // New state variables
+  // Camera states
+  const [facing, setFacing] = useState("back");
+  const [permission, requestPermission] = useCameraPermissions();
+  const [showCamera, setShowCamera] = useState(false);
+  const cameraRef = useRef(null);
+
+  // Location and date states
   const [incidentDate, setIncidentDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [location, setLocation] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationAddress, setLocationAddress] = useState("");
+  const [locationTimestamp, setLocationTimestamp] = useState(null);
 
   // Request camera and location permissions on component mount
   useEffect(() => {
@@ -38,7 +45,7 @@ export default function SubmitClaimScreen({ navigation }) {
 
   const requestPermissions = async () => {
     try {
-      // Request camera permissions
+      // Request camera permissions for ImagePicker
       const cameraPermission =
         await ImagePicker.requestCameraPermissionsAsync();
       const libraryPermission =
@@ -52,24 +59,18 @@ export default function SubmitClaimScreen({ navigation }) {
         cameraPermission.status !== "granted" ||
         libraryPermission.status !== "granted"
       ) {
-        Alert.alert(
-          "Permission Required",
-          "Camera and photo library access is needed to capture and upload images for your claim."
-        );
+        console.log("Camera or library permission not granted");
       }
 
       if (locationPermission.status !== "granted") {
-        Alert.alert(
-          "Location Permission",
-          "Location access helps us verify the incident location for your claim."
-        );
+        console.log("Location permission not granted");
       }
     } catch (error) {
       console.error("Error requesting permissions:", error);
     }
   };
 
-  // Get current location
+  // Get current location with timestamp
   const getCurrentLocation = async () => {
     setLocationLoading(true);
     try {
@@ -84,14 +85,28 @@ export default function SubmitClaimScreen({ navigation }) {
       }
 
       let location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.Best,
+        timeout: 15000, // 15 seconds timeout
       });
 
-      setLocation(location.coords);
+      const locationData = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        accuracy: location.coords.accuracy,
+        altitude: location.coords.altitude,
+        timestamp: new Date(location.timestamp), // Convert to Date object
+      };
+
+      setLocation(locationData);
+      setLocationTimestamp(new Date(location.timestamp));
 
       // Get address from coordinates
       try {
-        let address = await Location.reverseGeocodeAsync(location.coords);
+        let address = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+
         if (address.length > 0) {
           const addr = address[0];
           const addressString = [
@@ -99,6 +114,7 @@ export default function SubmitClaimScreen({ navigation }) {
             addr.street,
             addr.city,
             addr.region,
+            addr.postalCode,
             addr.country,
           ]
             .filter(Boolean)
@@ -110,7 +126,14 @@ export default function SubmitClaimScreen({ navigation }) {
         setLocationAddress("Location captured (address not available)");
       }
 
-      Alert.alert("Success", "Location captured successfully!");
+      Alert.alert(
+        "Location Captured",
+        `Location recorded at ${formatDateTime(
+          new Date(location.timestamp)
+        )}\n\nLatitude: ${location.coords.latitude.toFixed(
+          6
+        )}\nLongitude: ${location.coords.longitude.toFixed(6)}`
+      );
     } catch (error) {
       console.error("Error getting location:", error);
       Alert.alert("Error", "Failed to get location. Please try again.");
@@ -118,36 +141,48 @@ export default function SubmitClaimScreen({ navigation }) {
     setLocationLoading(false);
   };
 
-  // Simple date selection without DateTimePicker
-  const showDateSelection = () => {
-    Alert.alert("Select Incident Date", "Choose an option:", [
-      {
-        text: "Today",
-        onPress: () => setIncidentDate(new Date()),
-      },
-      {
-        text: "Yesterday",
-        onPress: () => {
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          setIncidentDate(yesterday);
+  // Date and time selection with more options
+  const showDateTimeSelection = () => {
+    Alert.alert(
+      "When did the incident occur?",
+      "Select the date and time when the situation actually happened:",
+      [
+        {
+          text: "Right Now",
+          onPress: () => setIncidentDate(new Date()),
         },
-      },
-      {
-        text: "Custom Date",
-        onPress: () => showCustomDateInput(),
-      },
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-    ]);
+        {
+          text: "Earlier Today",
+          onPress: () => {
+            const today = new Date();
+            today.setHours(today.getHours() - 2); // 2 hours ago
+            setIncidentDate(today);
+          },
+        },
+        {
+          text: "Yesterday",
+          onPress: () => {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            setIncidentDate(yesterday);
+          },
+        },
+        {
+          text: "Custom Date & Time",
+          onPress: () => showCustomDateTimeInput(),
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ]
+    );
   };
 
-  const showCustomDateInput = () => {
+  const showCustomDateTimeInput = () => {
     Alert.prompt(
-      "Enter Date",
-      "Enter date as YYYY-MM-DD (e.g., 2024-01-15):",
+      "Enter Date & Time",
+      "Enter when the incident occurred (YYYY-MM-DD HH:MM):\nExample: 2024-01-15 14:30",
       [
         {
           text: "Cancel",
@@ -155,77 +190,130 @@ export default function SubmitClaimScreen({ navigation }) {
         },
         {
           text: "OK",
-          onPress: (dateString) => {
-            if (dateString) {
-              const date = new Date(dateString);
-              if (!isNaN(date.getTime())) {
-                setIncidentDate(date);
+          onPress: (dateTimeString) => {
+            if (dateTimeString) {
+              // Parse date and time (format: YYYY-MM-DD HH:MM)
+              const [datePart, timePart] = dateTimeString.split(" ");
+              if (datePart && timePart) {
+                const [year, month, day] = datePart.split("-").map(Number);
+                const [hours, minutes] = timePart.split(":").map(Number);
+
+                const customDate = new Date(
+                  year,
+                  month - 1,
+                  day,
+                  hours,
+                  minutes
+                );
+
+                if (!isNaN(customDate.getTime())) {
+                  setIncidentDate(customDate);
+                  Alert.alert(
+                    "Success",
+                    `Date set to: ${formatDateTime(customDate)}`
+                  );
+                } else {
+                  Alert.alert(
+                    "Invalid Format",
+                    "Please use: YYYY-MM-DD HH:MM\nExample: 2024-01-15 14:30"
+                  );
+                }
               } else {
                 Alert.alert(
-                  "Invalid Date",
-                  "Please enter a valid date in YYYY-MM-DD format."
+                  "Invalid Format",
+                  "Please include both date and time."
                 );
               }
             }
           },
         },
       ],
-      "plain-text"
+      "plain-text",
+      `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(
+        2,
+        "0"
+      )}-${String(new Date().getDate()).padStart(2, "0")} 12:00`
     );
   };
 
-  // Open camera to capture image
-  const openCamera = async () => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission required",
-          "Please allow camera access to take photos."
-        );
-        return;
+  // Toggle camera facing
+  const toggleCameraFacing = () => {
+    setFacing((current) => (current === "back" ? "front" : "back"));
+  };
+
+  // Take picture with Expo Camera
+  const takePicture = async () => {
+    if (cameraRef.current) {
+      try {
+        const photo = await cameraRef.current.takePictureAsync({
+          quality: 0.8,
+          base64: false,
+          skipProcessing: false,
+          exif: true, // Include EXIF data which may contain location
+        });
+
+        if (photo && photo.uri) {
+          const newImages = [...images, photo.uri].slice(0, 5);
+          setImages(newImages);
+          setShowCamera(false);
+          Alert.alert("Success", "Photo captured successfully!");
+        }
+      } catch (error) {
+        console.error("Error taking picture:", error);
+        Alert.alert("Error", "Failed to capture photo. Please try again.");
       }
-
-      let result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-
-      console.log("Camera result:", result);
-
-      if (!result.canceled && result.assets) {
-        const newImages = result.assets.map((asset) => asset.uri);
-        setImages((prevImages) => [...prevImages, ...newImages].slice(0, 5)); // Limit to 5 images
-      }
-    } catch (error) {
-      console.error("Camera error:", error);
-      Alert.alert("Error", "Failed to open camera. Please try again.");
     }
+  };
+
+  // Open camera using Expo Camera
+  const openCamera = async () => {
+    if (!permission) {
+      await requestPermission();
+    }
+
+    if (!permission?.granted) {
+      Alert.alert(
+        "Camera Permission Required",
+        "Please grant camera permission to take photos."
+      );
+      return;
+    }
+
+    setShowCamera(true);
   };
 
   // Pick image from gallery
   const pickImage = async () => {
-    console.log("Picking image...");
+    try {
+      const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        const { status: newStatus } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (newStatus !== "granted") {
+          Alert.alert(
+            "Permission required",
+            "Please allow access to your photos."
+          );
+          return;
+        }
+      }
 
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission required", "Please allow access to your photos.");
-      return;
-    }
+      // Launch image picker with updated mediaTypes
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images", "videos"],
+        quality: 1,
+      });
 
-    // Launch image picker with updated mediaTypes
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images", "videos"],
-      quality: 1,
-    });
+      console.log("Image picker result:", result);
 
-    console.log("Image picker result:", result);
-
-    if (!result.canceled && result.assets) {
-      const newImages = result.assets.map((asset) => asset.uri);
-      setImages((prevImages) => [...prevImages, ...newImages]);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const newImages = result.assets.map((asset) => asset.uri);
+        const updatedImages = [...images, ...newImages].slice(0, 5);
+        setImages(updatedImages);
+      }
+    } catch (error) {
+      console.error("Image picker error:", error);
+      Alert.alert("Error", "Failed to access photos. Please try again.");
     }
   };
 
@@ -239,16 +327,13 @@ export default function SubmitClaimScreen({ navigation }) {
     try {
       console.log("Uploading image:", uri);
 
-      // Generate unique filename
       const filename = `claims/${
         auth.currentUser?.uid || "guest"
       }/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
 
-      // Using fetch and blob (recommended)
       const response = await fetch(uri);
       const blob = await response.blob();
 
-      // Upload to Firebase Storage
       const storage = getStorage();
       const storageRef = ref(storage, filename);
       await uploadBytes(storageRef, blob);
@@ -284,27 +369,39 @@ export default function SubmitClaimScreen({ navigation }) {
       return;
     }
 
-    // Validate claim amount
     const amount = parseFloat(claimAmount);
     if (isNaN(amount) || amount <= 0) {
       Alert.alert("Error", "Please enter a valid claim amount.");
       return;
     }
 
-    // Check if location is captured (optional but recommended)
-    if (!location) {
-      Alert.alert(
-        "Location Missing",
-        "We recommend adding location for better claim processing. Continue without location?",
-        [
-          { text: "Add Location", style: "cancel" },
-          { text: "Continue", onPress: () => submitClaim(amount) },
-        ]
-      );
-      return;
-    }
+    // Show confirmation with all collected data
+    const confirmationMessage = `
+Package: ${packageName}
+Amount: $${amount}
+Incident Date: ${formatDateTime(incidentDate)}
+${
+  location
+    ? `Location: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(
+        6
+      )}`
+    : "Location: Not provided"
+}
+Images: ${images.length} photo(s)
 
-    submitClaim(amount);
+Are you sure you want to submit this claim?
+    `.trim();
+
+    Alert.alert("Confirm Claim Submission", confirmationMessage, [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Submit Claim",
+        onPress: () => submitClaim(amount),
+      },
+    ]);
   };
 
   const submitClaim = async (amount) => {
@@ -319,7 +416,7 @@ export default function SubmitClaimScreen({ navigation }) {
         console.log(`Successfully uploaded ${imageUrls.length} images`);
       }
 
-      // Prepare claim data
+      // Prepare comprehensive claim data
       const claimData = {
         userId: auth.currentUser?.uid || "anonymous",
         packageName,
@@ -328,22 +425,44 @@ export default function SubmitClaimScreen({ navigation }) {
         claimAmount: amount,
         images: imageUrls,
         status: "Submitted",
+
+        // Submission metadata
         createdAt: Timestamp.now(),
+        submittedAt: Timestamp.now(),
+
+        // Incident details (when it actually happened)
         incidentDate: Timestamp.fromDate(incidentDate),
         incidentTimestamp: incidentDate.toISOString(),
+
+        // Location data if available
+        ...(location && {
+          location: {
+            // Coordinates
+            latitude: location.latitude,
+            longitude: location.longitude,
+
+            // Additional location data
+            accuracy: location.accuracy,
+            altitude: location.altitude,
+            address: locationAddress,
+
+            // Timestamps
+            capturedAt: Timestamp.fromDate(locationTimestamp || new Date()),
+            locationTimestamp: location.timestamp
+              ? Timestamp.fromDate(location.timestamp)
+              : Timestamp.now(),
+          },
+        }),
+
+        // Metadata
+        metadata: {
+          hasLocation: !!location,
+          imageCount: images.length,
+          locationAccuracy: location?.accuracy || null,
+          submittedFrom: "mobile_app",
+        },
       };
 
-      // Add location data if available
-      if (location) {
-        claimData.location = {
-          latitude: location.latitude,
-          longitude: location.longitude,
-          address: locationAddress,
-          capturedAt: Timestamp.now(),
-        };
-      }
-
-      // Submit claim to Firestore
       await addDoc(collection(db, "claims"), claimData);
 
       Alert.alert("Success", "Claim submitted successfully!");
@@ -356,6 +475,7 @@ export default function SubmitClaimScreen({ navigation }) {
       setImages([]);
       setLocation(null);
       setLocationAddress("");
+      setLocationTimestamp(null);
       setIncidentDate(new Date());
 
       navigation.goBack();
@@ -376,7 +496,6 @@ export default function SubmitClaimScreen({ navigation }) {
       images.length > 0 ||
       location
     ) {
-      // Show confirmation if there's unsaved data
       Alert.alert(
         "Discard Changes?",
         "You have unsaved changes. Are you sure you want to go back?",
@@ -397,6 +516,17 @@ export default function SubmitClaimScreen({ navigation }) {
     }
   };
 
+  // Format date and time for display
+  const formatDateTime = (date) => {
+    return date.toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   const formatDate = (date) => {
     return date.toLocaleDateString("en-US", {
       year: "numeric",
@@ -411,6 +541,42 @@ export default function SubmitClaimScreen({ navigation }) {
       minute: "2-digit",
     });
   };
+
+  // Camera View Component
+  if (showCamera) {
+    return (
+      <View style={styles.cameraContainer}>
+        <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
+          <View style={styles.cameraControls}>
+            <TouchableOpacity
+              style={styles.cameraButton}
+              onPress={() => setShowCamera(false)}
+            >
+              <Text style={styles.cameraButtonText}>✕</Text>
+            </TouchableOpacity>
+
+            <View style={styles.cameraBottomControls}>
+              <TouchableOpacity
+                style={styles.flipButton}
+                onPress={toggleCameraFacing}
+              >
+                <Text style={styles.flipButtonText}>🔄</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.captureButton}
+                onPress={takePicture}
+              >
+                <View style={styles.captureButtonInner} />
+              </TouchableOpacity>
+
+              <View style={styles.placeholder} />
+            </View>
+          </View>
+        </CameraView>
+      </View>
+    );
+  }
 
   return (
     <Layout navigation={navigation}>
@@ -449,17 +615,17 @@ export default function SubmitClaimScreen({ navigation }) {
 
         {/* Incident Date and Time */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Incident Date & Time *</Text>
+          <Text style={styles.sectionLabel}>When did it happen? *</Text>
           <Button
             mode="outlined"
-            onPress={showDateSelection}
+            onPress={showDateTimeSelection}
             style={styles.dateButton}
-            icon="calendar"
+            icon="clock-outline"
           >
-            {formatDate(incidentDate)} at {formatTime(incidentDate)}
+            {formatDateTime(incidentDate)}
           </Button>
           <Text style={styles.dateHelpText}>
-            Select when the incident occurred
+            Select the actual date and time when the incident occurred
           </Text>
         </View>
 
@@ -469,15 +635,29 @@ export default function SubmitClaimScreen({ navigation }) {
           {location ? (
             <View style={styles.locationContainer}>
               <Chip
-                icon="check-circle"
+                icon="map-marker-check"
                 mode="outlined"
                 style={styles.locationChip}
               >
-                Location Captured
+                📍 Location Recorded
               </Chip>
-              {locationAddress ? (
-                <Text style={styles.locationAddress}>{locationAddress}</Text>
-              ) : null}
+              <View style={styles.locationDetails}>
+                <Text style={styles.coordinates}>
+                  Lat: {location.latitude.toFixed(6)}, Lng:{" "}
+                  {location.longitude.toFixed(6)}
+                </Text>
+                {locationAddress ? (
+                  <Text style={styles.locationAddress}>{locationAddress}</Text>
+                ) : null}
+                <Text style={styles.locationTime}>
+                  Captured: {formatDateTime(locationTimestamp)}
+                </Text>
+                {location.accuracy && (
+                  <Text style={styles.accuracy}>
+                    Accuracy: ±{Math.round(location.accuracy)} meters
+                  </Text>
+                )}
+              </View>
               <Button
                 mode="text"
                 onPress={getCurrentLocation}
@@ -499,10 +679,10 @@ export default function SubmitClaimScreen({ navigation }) {
               >
                 {locationLoading
                   ? "Getting Location..."
-                  : "Capture Current Location"}
+                  : "📡 Capture Current Location"}
               </Button>
               <Text style={styles.locationHelpText}>
-                Recommended for faster claim processing
+                Records precise GPS coordinates with timestamp
               </Text>
             </View>
           )}
@@ -589,7 +769,7 @@ export default function SubmitClaimScreen({ navigation }) {
           onPress={handleSubmit}
           loading={uploading}
           disabled={uploading}
-          style={styles.button}
+          style={styles.submitButton}
           contentStyle={styles.buttonContent}
         >
           Submit Claim
@@ -614,7 +794,7 @@ const styles = StyleSheet.create({
   input: {
     marginBottom: 16,
   },
-  button: {
+  submitButton: {
     marginTop: 8,
     marginBottom: 16,
     paddingVertical: 8,
@@ -671,10 +851,29 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: "#4CAF50",
   },
-  locationAddress: {
-    fontSize: 14,
-    color: "#333",
+  locationDetails: {
     marginBottom: 8,
+  },
+  coordinates: {
+    fontSize: 12,
+    fontFamily: "monospace",
+    color: "#333",
+    marginBottom: 4,
+  },
+  locationAddress: {
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 4,
+  },
+  locationTime: {
+    fontSize: 10,
+    color: "#888",
+    fontStyle: "italic",
+    marginBottom: 4,
+  },
+  accuracy: {
+    fontSize: 10,
+    color: "#666",
   },
   imageButtonsContainer: {
     flexDirection: "row",
@@ -727,5 +926,61 @@ const styles = StyleSheet.create({
     color: "#666",
     textAlign: "center",
     marginTop: 8,
+  },
+  // Camera Styles
+  cameraContainer: {
+    flex: 1,
+    backgroundColor: "black",
+  },
+  camera: {
+    flex: 1,
+  },
+  cameraControls: {
+    flex: 1,
+    backgroundColor: "transparent",
+    justifyContent: "space-between",
+    padding: 20,
+  },
+  cameraButton: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    padding: 10,
+    borderRadius: 25,
+  },
+  cameraButtonText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  cameraBottomControls: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  flipButton: {
+    backgroundColor: "rgba(0,0,0,0.5)",
+    padding: 15,
+    borderRadius: 25,
+  },
+  flipButtonText: {
+    color: "white",
+    fontSize: 20,
+  },
+  captureButton: {
+    backgroundColor: "rgba(255,255,255,0.3)",
+    padding: 4,
+    borderRadius: 50,
+    borderWidth: 4,
+    borderColor: "white",
+  },
+  captureButtonInner: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "white",
+  },
+  placeholder: {
+    width: 60,
   },
 });
