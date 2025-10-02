@@ -68,7 +68,7 @@ export default function SignInScreen({ navigation }) {
 
   return (
     <LinearGradient
-      colors={["#3FA34D", "#00BFFF"]} // Agri Green to Sky Blue
+      colors={["#fff", "#fff"]} // Agri Green to Sky Blue
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.container}

@@ -9,9 +9,11 @@ import SignUpScreen from "./src/screens/SignUp";
 import DashboardScreen from "./src/screens/DashboardScreen";
 import ClaimsScreen from "./src/screens/ClaimsScreen";
 import AlertsScreen from "./src/screens/AlertsScreen";
+import SubmitClaimScreen from "./src/screens/SubmitClaimScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import { AlertProvider } from "./src/context/AlertContext";
 import { UserProvider } from "./src/context/UserContext";
+import { Provider as PaperProvider } from "react-native-paper";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -46,18 +48,21 @@ function MainTabs() {
 // Stack Navigator
 export default function App() {
   return (
-    <AlertProvider>
-      <UserProvider>
-        <NavigationContainer theme={AppTheme}>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="SignIn" component={AuthScreen} />
-            <Stack.Screen name="SignUp" component={SignUpScreen} />
-            {/* Tabs grouped under Main */}
-            <Stack.Screen name="Main" component={MainTabs} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </UserProvider>
-    </AlertProvider>
+    <PaperProvider>
+      <AlertProvider>
+        <UserProvider>
+          <NavigationContainer theme={AppTheme}>
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="SignIn" component={AuthScreen} />
+              <Stack.Screen name="SignUp" component={SignUpScreen} />
+              {/* Tabs grouped under Main */}
+              <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen name="claim-create" component={SubmitClaimScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </UserProvider>
+      </AlertProvider>
+    </PaperProvider>
   );
 }
 

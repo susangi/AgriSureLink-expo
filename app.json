@@ -10,12 +10,16 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#388E3C"
+      "backgroundColor": "#ffffff"
     },
     "scheme": "agrisurelink", 
     "ios": {
-      "supportsTablet": true
-    },
+      "supportsTablet": true,
+     "infoPlist": {
+      "NSPhotoLibraryUsageDescription": "The app needs access to your photos to let you share them with your claims.",
+      "NSCameraUsageDescription": "The app needs access to your camera to take photos for claims."
+    }
+  },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/splash.png",
@@ -28,7 +32,14 @@
       "favicon": "./assets/splash.png"
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app needs access to your photos to let you share them with your claims.",
+          "cameraPermission": "The app needs access to your camera to take photos for claims."
+        }
+      ]
     ]
   }
 }

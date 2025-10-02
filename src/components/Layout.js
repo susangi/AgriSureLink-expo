@@ -25,9 +25,9 @@ export default function Layout({ navigation, children }) {
     <View style={styles.container}>
       {/* -------- TOP HEADER -------- */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => alert("Menu clicked!")}>
+        {/* <TouchableOpacity onPress={() => alert("Menu clicked!")}>
           <Ionicons name="menu" size={28} color="#388E3C" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <Image source={require("../../assets/logo.png")} style={styles.logo} />
 
@@ -51,7 +51,7 @@ export default function Layout({ navigation, children }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#fff", marginTop: 10 },
   header: {
     flexDirection: "row",
     alignItems: "center",

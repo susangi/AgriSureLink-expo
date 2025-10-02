@@ -32,7 +32,7 @@ export default function DashboardScreen({ navigation }) {
       {/* ---------- SUBMIT CLAIM ---------- */}
       <TouchableOpacity
         style={[styles.card, styles.claimCard]}
-        onPress={() => navigation.navigate("Claims")}
+        onPress={() => navigation.navigate("claim-create")}
       >
         <AntDesign name="form" size={40} color="white" />
         <Text style={[styles.cardTitle, { color: "white" }]}>Submit Claim</Text>
