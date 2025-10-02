@@ -12,21 +12,30 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "scheme": "agrisurelink", 
+    "scheme": "agrisurelink",
     "ios": {
       "supportsTablet": true,
-     "infoPlist": {
-      "NSPhotoLibraryUsageDescription": "The app needs access to your photos to let you share them with your claims.",
-      "NSCameraUsageDescription": "The app needs access to your camera to take photos for claims."
-    }
-  },
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "The app needs access to your photos to let you share them with your claims.",
+        "NSCameraUsageDescription": "The app needs access to your camera to take photos for claims.",
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to provide weather alerts and farm-specific information.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses your location to provide weather alerts and farm-specific information."
+      }
+    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/splash.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.AgriSureLink"
+      "package": "com.anonymous.AgriSureLink",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/splash.png"
@@ -38,6 +47,12 @@
         {
           "photosPermission": "The app needs access to your photos to let you share them with your claims.",
           "cameraPermission": "The app needs access to your camera to take photos for claims."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location for weather alerts and farm monitoring."
         }
       ]
     ]

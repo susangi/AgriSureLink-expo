@@ -511,8 +511,28 @@ You can check the status anytime through the app.`;
     }
   };
 
+  // Handle back button press
   const handleBack = () => {
-    navigation.goBack();
+    if (packageName || reason || details || claimAmount || images.length > 0) {
+      // Show confirmation if there's unsaved data
+      Alert.alert(
+        "Discard Changes?",
+        "You have unsaved changes. Are you sure you want to go back?",
+        [
+          {
+            text: "Stay",
+            style: "cancel",
+          },
+          {
+            text: "Discard",
+            onPress: () => navigation.goBack(),
+            style: "destructive",
+          },
+        ]
+      );
+    } else {
+      navigation.goBack();
+    }
   };
 
   const formatDate = (date) => {
