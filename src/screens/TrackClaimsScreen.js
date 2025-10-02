@@ -43,7 +43,11 @@ export default function TrackClaimsScreen({ navigation, route }) {
     const unsubscribe = NetInfo.addEventListener((state) => {
       setIsOnline(state.isConnected);
     });
-    return () => unsubscribe();
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
   }, []);
 
   const loadOfflineTrackingData = async () => {
@@ -440,7 +444,11 @@ You can check the status anytime through the app.`;
             setRefreshing(false);
           });
 
-          return unsubscribe;
+          return () => {
+            if (typeof unsubscribe === "function") {
+              unsubscribe();
+            }
+          };
         } else {
           // Fetch all user's claims with status "submitted", "under_review", "documents_requested", or "processing"
           const claimsQuery = collection(db, "claims");
@@ -479,7 +487,10 @@ You can check the status anytime through the app.`;
             setRefreshing(false);
           });
 
-          return unsubscribe;
+          if (typeof unsubscribe === "function") {
+            console.log("Subscribed to real-time updates for claims");
+            unsubscribe();
+          }
         }
       } else {
         // Offline mode
@@ -498,7 +509,9 @@ You can check the status anytime through the app.`;
   useEffect(() => {
     const unsubscribe = fetchTrackingClaims();
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
     };
   }, [isOnline, claimId]);
 
@@ -508,30 +521,6 @@ You can check the status anytime through the app.`;
     } else {
       setRefreshing(false);
       Alert.alert("Offline", "Cannot refresh while offline");
-    }
-  };
-
-  // Handle back button press
-  const handleBack = () => {
-    if (packageName || reason || details || claimAmount || images.length > 0) {
-      // Show confirmation if there's unsaved data
-      Alert.alert(
-        "Discard Changes?",
-        "You have unsaved changes. Are you sure you want to go back?",
-        [
-          {
-            text: "Stay",
-            style: "cancel",
-          },
-          {
-            text: "Discard",
-            onPress: () => navigation.goBack(),
-            style: "destructive",
-          },
-        ]
-      );
-    } else {
-      navigation.goBack();
     }
   };
 
@@ -573,17 +562,9 @@ You can check the status anytime through the app.`;
           />
         }
       >
-        {/* Back Button */}
-        <Button
-          mode="outlined"
-          onPress={handleBack}
-          style={styles.backButton}
-          icon="arrow-left"
-          textColor="#388E3C"
-        >
+        <Button mode="contained" onPress={() => navigation.goBack()}>
           Back
         </Button>
-
         {/* Header */}
         <View style={styles.header}>
           <Title style={styles.title}>Track Claims</Title>
