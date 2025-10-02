@@ -6,6 +6,7 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
+  Platform,
 } from "react-native";
 import { TextInput, Button, Title, Chip, Text } from "react-native-paper";
 import { db, auth } from "../services/firebase/config";
@@ -16,6 +17,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Layout from "../components/Layout";
 import * as Location from "expo-location";
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 export default function SubmitClaimScreen({ navigation }) {
   const [packageName, setPackageName] = useState("");
@@ -33,6 +35,8 @@ export default function SubmitClaimScreen({ navigation }) {
 
   // Location and date states
   const [incidentDate, setIncidentDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState("date"); // 'date' or 'time'
   const [location, setLocation] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationAddress, setLocationAddress] = useState("");
@@ -141,99 +145,101 @@ export default function SubmitClaimScreen({ navigation }) {
     setLocationLoading(false);
   };
 
-  // Date and time selection with more options
-  const showDateTimeSelection = () => {
-    Alert.alert(
-      "When did the incident occur?",
-      "Select the date and time when the situation actually happened:",
-      [
-        {
-          text: "Right Now",
-          onPress: () => setIncidentDate(new Date()),
-        },
-        {
-          text: "Earlier Today",
-          onPress: () => {
-            const today = new Date();
-            today.setHours(today.getHours() - 2); // 2 hours ago
-            setIncidentDate(today);
-          },
-        },
-        {
-          text: "Yesterday",
-          onPress: () => {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            setIncidentDate(yesterday);
-          },
-        },
-        {
-          text: "Custom Date & Time",
-          onPress: () => showCustomDateTimeInput(),
-        },
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-      ]
-    );
+  // Open date picker
+  const openDatePicker = () => {
+    setPickerMode("date");
+    setShowDatePicker(true);
   };
 
-  const showCustomDateTimeInput = () => {
-    Alert.prompt(
-      "Enter Date & Time",
-      "Enter when the incident occurred (YYYY-MM-DD HH:MM):\nExample: 2024-01-15 14:30",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "OK",
-          onPress: (dateTimeString) => {
-            if (dateTimeString) {
-              // Parse date and time (format: YYYY-MM-DD HH:MM)
-              const [datePart, timePart] = dateTimeString.split(" ");
-              if (datePart && timePart) {
-                const [year, month, day] = datePart.split("-").map(Number);
-                const [hours, minutes] = timePart.split(":").map(Number);
+  // Open time picker after date is selected
+  const openTimePicker = () => {
+    setPickerMode("time");
+    setShowDatePicker(true);
+  };
 
-                const customDate = new Date(
-                  year,
-                  month - 1,
-                  day,
-                  hours,
-                  minutes
-                );
+  // Handle date/time picker changes
+  const onDateTimeChange = (event, selectedDate) => {
+    setShowDatePicker(false);
 
-                if (!isNaN(customDate.getTime())) {
-                  setIncidentDate(customDate);
-                  Alert.alert(
-                    "Success",
-                    `Date set to: ${formatDateTime(customDate)}`
-                  );
-                } else {
-                  Alert.alert(
-                    "Invalid Format",
-                    "Please use: YYYY-MM-DD HH:MM\nExample: 2024-01-15 14:30"
-                  );
-                }
-              } else {
-                Alert.alert(
-                  "Invalid Format",
-                  "Please include both date and time."
-                );
-              }
-            }
-          },
+    if (selectedDate) {
+      // Prevent future dates
+      const now = new Date();
+      if (selectedDate > now) {
+        Alert.alert(
+          "Invalid Date",
+          "Please select a date and time in the past. Future dates are not allowed for incident reports.",
+          [{ text: "OK", onPress: () => setShowDatePicker(true) }]
+        );
+        return;
+      }
+
+      if (pickerMode === "date") {
+        // Keep the current time, just update the date
+        const currentTime = incidentDate;
+        selectedDate.setHours(currentTime.getHours(), currentTime.getMinutes());
+        setIncidentDate(selectedDate);
+
+        // Auto-open time picker after date selection
+        setTimeout(() => {
+          setPickerMode("time");
+          setShowDatePicker(true);
+        }, 300);
+      } else {
+        // Time picker - update time while keeping the date
+        const currentDate = incidentDate;
+        selectedDate.setFullYear(
+          currentDate.getFullYear(),
+          currentDate.getMonth(),
+          currentDate.getDate()
+        );
+        setIncidentDate(selectedDate);
+      }
+    }
+  };
+
+  // Quick date selection options
+  const showQuickOptions = () => {
+    Alert.alert("Select Incident Time", "Choose when the incident occurred:", [
+      {
+        text: "Right Now",
+        onPress: () => {
+          const now = new Date();
+          setIncidentDate(now);
         },
-      ],
-      "plain-text",
-      `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(
-        2,
-        "0"
-      )}-${String(new Date().getDate()).padStart(2, "0")} 12:00`
-    );
+      },
+      {
+        text: "1 Hour Ago",
+        onPress: () => {
+          const oneHourAgo = new Date();
+          oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+          setIncidentDate(oneHourAgo);
+        },
+      },
+      {
+        text: "3 Hours Ago",
+        onPress: () => {
+          const threeHoursAgo = new Date();
+          threeHoursAgo.setHours(threeHoursAgo.getHours() - 3);
+          setIncidentDate(threeHoursAgo);
+        },
+      },
+      {
+        text: "Yesterday Same Time",
+        onPress: () => {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          setIncidentDate(yesterday);
+        },
+      },
+      {
+        text: "Custom Date & Time",
+        onPress: openDatePicker,
+      },
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+    ]);
   };
 
   // Toggle camera facing
@@ -298,10 +304,13 @@ export default function SubmitClaimScreen({ navigation }) {
         }
       }
 
-      // Launch image picker with updated mediaTypes
       let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images", "videos"],
-        quality: 1,
+        mediaTypes: ImagePicker.MediaType.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        allowsMultipleSelection: true,
+        selectionLimit: 5 - images.length,
       });
 
       console.log("Image picker result:", result);
@@ -616,18 +625,53 @@ Are you sure you want to submit this claim?
         {/* Incident Date and Time */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>When did it happen? *</Text>
-          <Button
-            mode="outlined"
-            onPress={showDateTimeSelection}
-            style={styles.dateButton}
-            icon="clock-outline"
-          >
-            {formatDateTime(incidentDate)}
-          </Button>
+
+          <View style={styles.dateTimeContainer}>
+            <Button
+              mode="outlined"
+              onPress={showQuickOptions}
+              style={styles.dateTimeButton}
+              icon="calendar-clock"
+            >
+              {formatDateTime(incidentDate)}
+            </Button>
+
+            <View style={styles.dateTimeButtons}>
+              <Button
+                mode="text"
+                onPress={openDatePicker}
+                style={styles.smallButton}
+                compact
+              >
+                Change Date
+              </Button>
+              <Button
+                mode="text"
+                onPress={openTimePicker}
+                style={styles.smallButton}
+                compact
+              >
+                Change Time
+              </Button>
+            </View>
+          </View>
+
           <Text style={styles.dateHelpText}>
             Select the actual date and time when the incident occurred
           </Text>
         </View>
+
+        {/* DateTime Picker */}
+        {showDatePicker && (
+          <DateTimePicker
+            value={incidentDate}
+            mode={pickerMode}
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={onDateTimeChange}
+            maximumDate={new Date()} // Prevent future dates
+            textColor="#2E7D32"
+          />
+        )}
 
         {/* Location */}
         <View style={styles.section}>
@@ -817,9 +861,20 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: "#333",
   },
-  dateButton: {
+  dateTimeContainer: {
     marginBottom: 4,
+  },
+  dateTimeButton: {
+    marginBottom: 8,
     borderColor: "#2E7D32",
+  },
+  dateTimeButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  smallButton: {
+    flex: 1,
+    marginHorizontal: 4,
   },
   dateHelpText: {
     fontSize: 12,
