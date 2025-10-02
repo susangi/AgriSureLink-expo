@@ -12,6 +12,7 @@ import AlertsScreen from "./src/screens/AlertsScreen";
 import SubmitClaimScreen from "./src/screens/SubmitClaimScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import ClaimHistoryScreen from "./src/screens/ClaimHistoryScreen";
+import ClaimDetailsScreen from "./src/screens/ClaimDetailsScreen";
 import { AlertProvider } from "./src/context/AlertContext";
 import { UserProvider } from "./src/context/UserContext";
 import { Provider as PaperProvider } from "react-native-paper";
@@ -63,6 +64,11 @@ export default function App() {
                 name="ClaimHistory"
                 component={ClaimHistoryScreen}
                 options={{ title: "Claim History" }}
+              />
+              <Stack.Screen
+                name="ClaimDetails"
+                component={ClaimDetailsScreen}
+                options={{ title: "Claim Details" }}
               />
             </Stack.Navigator>
           </NavigationContainer>
