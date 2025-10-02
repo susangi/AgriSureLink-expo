@@ -12,6 +12,7 @@ import AlertsScreen from "./src/screens/AlertsScreen";
 import SubmitClaimScreen from "./src/screens/SubmitClaimScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import ClaimHistoryScreen from "./src/screens/ClaimHistoryScreen";
+import TrackClaimsScreen from "./src/screens/TrackClaimsScreen";
 import ClaimDetailsScreen from "./src/screens/ClaimDetailsScreen";
 import { AlertProvider } from "./src/context/AlertContext";
 import { UserProvider } from "./src/context/UserContext";
@@ -69,6 +70,11 @@ export default function App() {
                 name="ClaimDetails"
                 component={ClaimDetailsScreen}
                 options={{ title: "Claim Details" }}
+              />
+              <Stack.Screen
+                name="TrackClaims"
+                component={TrackClaimsScreen}
+                options={{ title: "Track Claims" }}
               />
             </Stack.Navigator>
           </NavigationContainer>

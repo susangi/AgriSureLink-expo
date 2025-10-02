@@ -75,7 +75,7 @@ export default function TrackClaimsScreen({ navigation, route }) {
     try {
       const statusText = getStatusText(claim.status);
       const progress = Math.round(getClaimProgress(claim.status) * 100);
-      
+
       const shareMessage = `📋 Insurance Claim Status Update
 
 Claim: ${claim.packageName}
@@ -93,22 +93,22 @@ You can check the status anytime through the app.`;
 
       const shareOptions = {
         message: shareMessage,
-        title: 'Claim Status Update',
+        title: "Claim Status Update",
       };
 
       try {
         const result = await Share.share(shareOptions);
         if (result.action === Share.sharedAction) {
-          console.log('Share was successful');
+          console.log("Share was successful");
         } else if (result.action === Share.dismissedAction) {
-          console.log('Share was dismissed');
+          console.log("Share was dismissed");
         }
       } catch (shareError) {
-        console.error('Error sharing:', shareError);
+        console.error("Error sharing:", shareError);
         Alert.alert("Error", "Failed to share claim status");
       }
     } catch (error) {
-      console.error('Error in shareClaimStatus:', error);
+      console.error("Error in shareClaimStatus:", error);
       Alert.alert("Error", "Failed to prepare share content");
     }
   };
@@ -118,11 +118,17 @@ You can check the status anytime through the app.`;
     try {
       const statusText = getStatusText(claim.status);
       const progress = Math.round(getClaimProgress(claim.status) * 100);
-      
-      const message = `Insurance Claim Status Update%0A%0AClaim: ${claim.packageName}%0AAmount: $${parseFloat(claim.claimAmount).toFixed(2)}%0AStatus: ${statusText}%0AProgress: ${progress}% complete%0A%0A${getStatusDescription(claim.status)}%0A%0ASubmitted: ${formatDate(claim.createdAt)}`;
+
+      const message = `Insurance Claim Status Update%0A%0AClaim: ${
+        claim.packageName
+      }%0AAmount: $${parseFloat(claim.claimAmount).toFixed(
+        2
+      )}%0AStatus: ${statusText}%0AProgress: ${progress}% complete%0A%0A${getStatusDescription(
+        claim.status
+      )}%0A%0ASubmitted: ${formatDate(claim.createdAt)}`;
 
       const url = `whatsapp://send?text=${message}`;
-      
+
       const canOpen = await Linking.canOpenURL(url);
       if (canOpen) {
         await Linking.openURL(url);
@@ -134,7 +140,7 @@ You can check the status anytime through the app.`;
         );
       }
     } catch (error) {
-      console.error('Error sharing via WhatsApp:', error);
+      console.error("Error sharing via WhatsApp:", error);
       Alert.alert("Error", "Failed to share via WhatsApp");
     }
   };
@@ -144,11 +150,17 @@ You can check the status anytime through the app.`;
     try {
       const statusText = getStatusText(claim.status);
       const progress = Math.round(getClaimProgress(claim.status) * 100);
-      
-      const message = `Insurance Claim Status Update\n\nClaim: ${claim.packageName}\nAmount: $${parseFloat(claim.claimAmount).toFixed(2)}\nStatus: ${statusText}\nProgress: ${progress}% complete\n\n${getStatusDescription(claim.status)}\n\nSubmitted: ${formatDate(claim.createdAt)}`;
+
+      const message = `Insurance Claim Status Update\n\nClaim: ${
+        claim.packageName
+      }\nAmount: $${parseFloat(claim.claimAmount).toFixed(
+        2
+      )}\nStatus: ${statusText}\nProgress: ${progress}% complete\n\n${getStatusDescription(
+        claim.status
+      )}\n\nSubmitted: ${formatDate(claim.createdAt)}`;
 
       const url = `sms:&body=${encodeURIComponent(message)}`;
-      
+
       const canOpen = await Linking.canOpenURL(url);
       if (canOpen) {
         await Linking.openURL(url);
@@ -156,7 +168,7 @@ You can check the status anytime through the app.`;
         Alert.alert("Error", "Unable to open SMS app");
       }
     } catch (error) {
-      console.error('Error sharing via SMS:', error);
+      console.error("Error sharing via SMS:", error);
       Alert.alert("Error", "Failed to share via SMS");
     }
   };
@@ -166,12 +178,22 @@ You can check the status anytime through the app.`;
     try {
       const statusText = getStatusText(claim.status);
       const progress = Math.round(getClaimProgress(claim.status) * 100);
-      
-      const subject = `Insurance Claim Status Update - ${claim.packageName}`;
-      const body = `Insurance Claim Status Update\n\nClaim: ${claim.packageName}\nAmount: $${parseFloat(claim.claimAmount).toFixed(2)}\nStatus: ${statusText}\nProgress: ${progress}% complete\n\n${getStatusDescription(claim.status)}\n\nSubmitted: ${formatDate(claim.createdAt)}\nClaim ID: ${claim.id.substring(0, 8).toUpperCase()}`;
 
-      const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      
+      const subject = `Insurance Claim Status Update - ${claim.packageName}`;
+      const body = `Insurance Claim Status Update\n\nClaim: ${
+        claim.packageName
+      }\nAmount: $${parseFloat(claim.claimAmount).toFixed(
+        2
+      )}\nStatus: ${statusText}\nProgress: ${progress}% complete\n\n${getStatusDescription(
+        claim.status
+      )}\n\nSubmitted: ${formatDate(claim.createdAt)}\nClaim ID: ${claim.id
+        .substring(0, 8)
+        .toUpperCase()}`;
+
+      const url = `mailto:?subject=${encodeURIComponent(
+        subject
+      )}&body=${encodeURIComponent(body)}`;
+
       const canOpen = await Linking.canOpenURL(url);
       if (canOpen) {
         await Linking.openURL(url);
@@ -179,7 +201,7 @@ You can check the status anytime through the app.`;
         Alert.alert("Error", "No email app configured");
       }
     } catch (error) {
-      console.error('Error sharing via Email:', error);
+      console.error("Error sharing via Email:", error);
       Alert.alert("Error", "Failed to share via Email");
     }
   };
@@ -303,7 +325,7 @@ You can check the status anytime through the app.`;
         break;
       case "approved":
       case "rejected":
-        steps.forEach(step => step.completed = true);
+        steps.forEach((step) => (step.completed = true));
         steps[4].name = status === "approved" ? "Approved" : "Rejected";
         break;
     }
@@ -394,16 +416,20 @@ You can check the status anytime through the app.`;
               const claimData = {
                 id: docSnapshot.id,
                 ...docSnapshot.data(),
-                createdAt: docSnapshot.data().createdAt?.toDate?.() || new Date(),
+                createdAt:
+                  docSnapshot.data().createdAt?.toDate?.() || new Date(),
               };
-              
+
               // Check if user owns this claim
               if (claimData.userId === auth.currentUser.uid) {
                 setTrackingClaims([claimData]);
                 saveTrackingDataToStorage([claimData]);
                 setOfflineData(false);
               } else {
-                Alert.alert("Error", "You don't have permission to view this claim");
+                Alert.alert(
+                  "Error",
+                  "You don't have permission to view this claim"
+                );
                 setTrackingClaims([]);
               }
             } else {
@@ -426,10 +452,17 @@ You can check the status anytime through the app.`;
                 ...doc.data(),
                 createdAt: doc.data().createdAt?.toDate?.() || new Date(),
               };
-              
+
               // Only include user's claims that are in progress
-              if (claim.userId === auth.currentUser.uid && 
-                  ["submitted", "under_review", "documents_requested", "processing"].includes(claim.status?.toLowerCase())) {
+              if (
+                claim.userId === auth.currentUser.uid &&
+                [
+                  "submitted",
+                  "under_review",
+                  "documents_requested",
+                  "processing",
+                ].includes(claim.status?.toLowerCase())
+              ) {
                 claimsData.push(claim);
               }
             });
@@ -596,24 +629,32 @@ You can check the status anytime through the app.`;
             {trackingClaims.map((claim) => {
               const progress = getClaimProgress(claim.status);
               const statusSteps = getStatusSteps(claim.status);
-              
+
               return (
                 <Card key={claim.id} style={styles.trackingCard}>
                   <Card.Content>
                     <View style={styles.cardHeader}>
-                      <Title style={styles.claimTitle}>{claim.packageName}</Title>
+                      <Title style={styles.claimTitle}>
+                        {claim.packageName}
+                      </Title>
                       <Chip
                         mode="outlined"
                         style={[
                           styles.statusChip,
                           {
-                            backgroundColor: getStatusColor(claim.status) + "20",
+                            backgroundColor:
+                              getStatusColor(claim.status) + "20",
                             borderColor: getStatusColor(claim.status),
                           },
                         ]}
-                        textStyle={{ color: getStatusColor(claim.status), fontWeight: "bold" }}
+                        textStyle={{
+                          color: getStatusColor(claim.status),
+                          fontWeight: "bold",
+                        }}
                       >
-                        {claim.status ? claim.status.replace(/_/g, ' ').toUpperCase() : "UNKNOWN"}
+                        {claim.status
+                          ? claim.status.replace(/_/g, " ").toUpperCase()
+                          : "UNKNOWN"}
                       </Chip>
                     </View>
 
@@ -679,7 +720,9 @@ You can check the status anytime through the app.`;
                           {getStatusDescription(claim.status)}
                         </Paragraph>
                         <View style={styles.metaInfo}>
-                          <Text style={styles.metaLabel}>Estimated completion:</Text>
+                          <Text style={styles.metaLabel}>
+                            Estimated completion:
+                          </Text>
                           <Text style={styles.metaValue}>
                             {getEstimatedTime(claim.status)}
                           </Text>
@@ -704,8 +747,10 @@ You can check the status anytime through the app.`;
                     {claim.status?.toLowerCase() === "documents_requested" && (
                       <Button
                         mode="contained"
-                        onPress={() => 
-                          navigation.navigate("UploadDocuments", { claimId: claim.id })
+                        onPress={() =>
+                          navigation.navigate("UploadDocuments", {
+                            claimId: claim.id,
+                          })
                         }
                         style={styles.documentsButton}
                         buttonColor="#388E3C"
@@ -719,7 +764,9 @@ You can check the status anytime through the app.`;
                   <Card.Actions>
                     <Button
                       onPress={() =>
-                        navigation.navigate("ClaimDetails", { claimId: claim.id })
+                        navigation.navigate("ClaimDetails", {
+                          claimId: claim.id,
+                        })
                       }
                       textColor="#388E3C"
                     >
