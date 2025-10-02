@@ -14,6 +14,7 @@ import {
   Chip,
   ActivityIndicator,
   Text,
+  IconButton,
 } from "react-native-paper";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db, auth } from "../services/firebase/config";
@@ -43,7 +44,6 @@ export default function ClaimHistoryScreen({ navigation }) {
       const storedClaims = await AsyncStorage.getItem(CLAIMS_STORAGE_KEY);
       if (storedClaims) {
         const parsedClaims = JSON.parse(storedClaims);
-        // Sort by date when loading from storage
         const sortedClaims = parsedClaims.sort(
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
         );
@@ -66,7 +66,6 @@ export default function ClaimHistoryScreen({ navigation }) {
     }
   };
 
-  // Fixed fetch function without unsubscribe issue
   const fetchClaims = async (isRefresh = false) => {
     if (isRefresh) {
       setRefreshing(true);
@@ -82,14 +81,12 @@ export default function ClaimHistoryScreen({ navigation }) {
         return;
       }
 
-      // Use simple query without ordering to avoid index issues
       const claimsQuery = query(
         collection(db, "claims"),
         where("userId", "==", auth.currentUser.uid)
       );
 
       if (isOnline) {
-        // Use getDocs instead of onSnapshot to avoid unsubscribe issues
         const querySnapshot = await getDocs(claimsQuery);
         const claimsData = [];
 
@@ -101,7 +98,6 @@ export default function ClaimHistoryScreen({ navigation }) {
           });
         });
 
-        // Sort locally instead of using Firestore ordering
         const sortedClaims = claimsData.sort(
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
         );
@@ -110,13 +106,10 @@ export default function ClaimHistoryScreen({ navigation }) {
         saveClaimsToStorage(sortedClaims);
         setOfflineData(false);
       } else {
-        // Offline mode - load from storage
         await loadOfflineClaims();
       }
     } catch (error) {
       console.error("Error fetching claims:", error);
-
-      // If it's an index error, try alternative approach
       if (error.code === "failed-precondition") {
         Alert.alert(
           "Index Building",
@@ -124,7 +117,6 @@ export default function ClaimHistoryScreen({ navigation }) {
           [{ text: "OK" }]
         );
       }
-
       await loadOfflineClaims();
     } finally {
       setLoading(false);
@@ -145,55 +137,6 @@ export default function ClaimHistoryScreen({ navigation }) {
     }
   };
 
-  // Fixed back button function - removed references to non-existent variables
-  const handleBack = () => {
-    // Since this is ClaimHistory screen, we don't have form data to check
-    // Just navigate back directly
-    navigation.goBack();
-  };
-
-  // Test offline functionality
-  const testOfflineFunctionality = async () => {
-    console.log("Testing offline functionality");
-
-    // Test 1: Check AsyncStorage
-    const storedData = await AsyncStorage.getItem(CLAIMS_STORAGE_KEY);
-    console.log(
-      "Storage check:",
-      storedData ? `${JSON.parse(storedData).length} claims stored` : "No data"
-    );
-
-    // Test 2: Simulate offline data
-    const testOfflineData = [
-      {
-        id: "test-offline-1",
-        packageName: "Test Offline Claim",
-        reason: "Testing offline functionality",
-        claimAmount: 100,
-        status: "Submitted",
-        createdAt: new Date().toISOString(),
-        userId: auth.currentUser?.uid,
-      },
-    ];
-
-    await AsyncStorage.setItem(
-      CLAIMS_STORAGE_KEY,
-      JSON.stringify(testOfflineData)
-    );
-    console.log("Test data saved to storage");
-
-    // Test 3: Load offline data
-    await loadOfflineClaims();
-    console.log("Offline data loaded, claims count:", claims.length);
-
-    Alert.alert(
-      "Offline Test Complete",
-      `Storage: ${storedData ? "Has data" : "Empty"}\nClaims loaded: ${
-        claims.length
-      }`
-    );
-  };
-
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case "approved":
@@ -209,16 +152,28 @@ export default function ClaimHistoryScreen({ navigation }) {
     }
   };
 
+  const getStatusIcon = (status) => {
+    switch (status?.toLowerCase()) {
+      case "approved":
+        return "check-circle";
+      case "rejected":
+        return "close-circle";
+      case "pending":
+        return "clock";
+      case "submitted":
+        return "send";
+      default:
+        return "help-circle";
+    }
+  };
+
   const formatDate = (date) => {
     if (!date) return "Unknown date";
-
     const dateObj = date instanceof Date ? date : new Date(date);
     return dateObj.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
   };
 
@@ -230,8 +185,8 @@ export default function ClaimHistoryScreen({ navigation }) {
     return (
       <Layout navigation={navigation}>
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
-          <Text style={styles.loadingText}>Loading claims...</Text>
+          <ActivityIndicator size="large" color="#388E3C" />
+          <Text style={styles.loadingText}>Loading your claims...</Text>
         </View>
       </Layout>
     );
@@ -246,104 +201,57 @@ export default function ClaimHistoryScreen({ navigation }) {
             refreshing={refreshing}
             onRefresh={handleRefresh}
             enabled={isOnline}
+            colors={["#388E3C"]}
+            tintColor="#388E3C"
           />
         }
       >
-        {/* Back Button */}
-        <Button
-          mode="outlined"
-          onPress={handleBack}
-          style={styles.backButton}
-          icon="arrow-left"
-        >
-          Back
-        </Button>
-
-        {/* Debug Information Panel */}
-        <Card style={styles.debugCard}>
-          <Card.Content>
-            <Title style={styles.debugTitle}>Connection Status</Title>
-            <View style={styles.debugGrid}>
-              <View style={styles.debugItem}>
-                <Text style={styles.debugLabel}>Network Status:</Text>
-                <Chip
-                  mode={isOnline ? "contained" : "outlined"}
-                  style={isOnline ? styles.onlineChip : styles.offlineChip}
-                >
-                  {isOnline ? "Online" : "Offline"}
-                </Chip>
-              </View>
-              <View style={styles.debugItem}>
-                <Text style={styles.debugLabel}>Data Source:</Text>
-                <Chip
-                  mode={offlineData ? "outlined" : "contained"}
-                  style={offlineData ? styles.cachedChip : styles.liveChip}
-                >
-                  {offlineData ? "Cached" : "Live"}
-                </Chip>
-              </View>
-              <View style={styles.debugItem}>
-                <Text style={styles.debugLabel}>Claims Count:</Text>
-                <Text style={styles.debugValue}>{claims.length}</Text>
-              </View>
-              <View style={styles.debugItem}>
-                <Text style={styles.debugLabel}>User ID:</Text>
-                <Text style={styles.debugValue}>
-                  {auth.currentUser?.uid
-                    ? auth.currentUser.uid.substring(0, 8) + "..."
-                    : "Not signed in"}
+        {/* Header Section */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <View style={styles.titleRow}>
+              <IconButton
+                icon="history"
+                size={28}
+                iconColor="#FFFFFF"
+                style={styles.titleIcon}
+              />
+              <View>
+                <Title style={styles.title}>Claim History</Title>
+                <Text style={styles.subtitle}>
+                  {claims.length} claim{claims.length !== 1 ? "s" : ""} total
                 </Text>
               </View>
             </View>
+            <Button
+              mode="contained"
+              onPress={() => navigation.navigate("claimCreate")}
+              style={styles.newClaimButton}
+              labelStyle={styles.newClaimButtonLabel}
+              icon="plus-circle"
+            >
+              New Claim
+            </Button>
+          </View>
 
-            {/* Test Buttons */}
-            <View style={styles.testButtons}>
-              <Button
-                mode="outlined"
-                onPress={async () => {
-                  const stored = await AsyncStorage.getItem(CLAIMS_STORAGE_KEY);
-                  Alert.alert(
-                    "Storage Contents",
-                    stored
-                      ? `Found ${JSON.parse(stored).length} claims in storage`
-                      : "No data in storage"
-                  );
-                }}
-                style={styles.testButton}
-              >
-                Check Storage
-              </Button>
-              <Button
-                mode="outlined"
-                onPress={async () => {
-                  await AsyncStorage.removeItem(CLAIMS_STORAGE_KEY);
-                  Alert.alert(
-                    "Storage Cleared",
-                    "Offline cache has been cleared"
-                  );
-                  setClaims([]);
-                }}
-                style={styles.testButton}
-              >
-                Clear Cache
-              </Button>
-            </View>
-          </Card.Content>
-        </Card>
-
-        <View style={styles.header}>
-          <Title style={styles.title}>Claim History</Title>
-          <View style={styles.statusContainer}>
+          {/* Status Badges */}
+          <View style={styles.statusBadges}>
             {!isOnline && (
-              <Chip icon="wifi-off" mode="outlined" style={styles.offlineChip}>
-                Offline
+              <Chip
+                icon="wifi-off"
+                mode="outlined"
+                style={styles.offlineChip}
+                textStyle={styles.offlineChipText}
+              >
+                Offline Mode
               </Chip>
             )}
             {offlineData && (
               <Chip
-                icon="cloud-off"
+                icon="cloud-download"
                 mode="outlined"
-                style={styles.offlineDataChip}
+                style={styles.cachedChip}
+                textStyle={styles.cachedChipText}
               >
                 Cached Data
               </Chip>
@@ -353,16 +261,26 @@ export default function ClaimHistoryScreen({ navigation }) {
 
         {claims.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No claims found</Text>
+            <View style={styles.emptyIllustration}>
+              <IconButton
+                icon="file-document-outline"
+                size={80}
+                iconColor="#388E3C"
+                style={styles.emptyIcon}
+              />
+            </View>
+            <Text style={styles.emptyTitle}>No Claims Found</Text>
             <Paragraph style={styles.emptySubtext}>
               {offlineData
-                ? "No cached claims available. Go online to sync your data."
-                : "You haven't submitted any claims yet."}
+                ? "No cached claims available. Connect to the internet to sync your data."
+                : "You haven't submitted any claims yet. Start by creating your first claim!"}
             </Paragraph>
             <Button
               mode="contained"
               onPress={() => navigation.navigate("claimCreate")}
               style={styles.submitButton}
+              labelStyle={styles.submitButtonLabel}
+              icon="rocket-launch"
             >
               Submit Your First Claim
             </Button>
@@ -372,89 +290,203 @@ export default function ClaimHistoryScreen({ navigation }) {
             {offlineData && (
               <Card style={styles.offlineBanner}>
                 <Card.Content style={styles.offlineBannerContent}>
+                  <View style={styles.offlineBannerIcon}>
+                    <IconButton
+                      icon="cloud-alert"
+                      size={20}
+                      iconColor="#E65100"
+                    />
+                  </View>
                   <Paragraph style={styles.offlineBannerText}>
-                    Showing cached data. Some information may not be up to date.
+                    Showing cached data. Connect to internet for latest updates.
                   </Paragraph>
                 </Card.Content>
               </Card>
             )}
 
-            {claims.map((claim) => (
-              <Card key={claim.id} style={styles.claimCard}>
-                <Card.Content>
-                  <View style={styles.cardHeader}>
-                    <Title style={styles.claimTitle}>{claim.packageName}</Title>
-                    <Chip
-                      mode="outlined"
-                      style={[
-                        styles.statusChip,
-                        {
-                          backgroundColor: getStatusColor(claim.status) + "20",
-                        },
-                      ]}
-                      textStyle={{ color: getStatusColor(claim.status) }}
-                    >
-                      {claim.status || "Unknown"}
-                    </Chip>
-                  </View>
-
-                  <Paragraph style={styles.amount}>
-                    {formatAmount(claim.claimAmount)}
-                  </Paragraph>
-
-                  <Paragraph style={styles.reason}>
-                    <Text style={styles.label}>Reason: </Text>
-                    {claim.reason}
-                  </Paragraph>
-
-                  {claim.details && (
-                    <Paragraph style={styles.details}>
-                      <Text style={styles.label}>Details: </Text>
-                      {claim.details}
-                    </Paragraph>
-                  )}
-
-                  <View style={styles.metaContainer}>
-                    <Paragraph style={styles.date}>
-                      {formatDate(claim.createdAt)}
-                    </Paragraph>
-
-                    {claim.images && claim.images.length > 0 && (
-                      <Chip
-                        icon="image"
-                        mode="outlined"
-                        compact
-                        style={styles.imageChip}
-                      >
-                        {claim.images.length} image
-                        {claim.images.length > 1 ? "s" : ""}
-                      </Chip>
-                    )}
-                  </View>
-                </Card.Content>
-
-                <Card.Actions>
-                  <Button
-                    onPress={() =>
-                      navigation.navigate("ClaimDetails", { claimId: claim.id })
+            {/* Claims Summary */}
+            <View style={styles.summaryCards}>
+              <Card style={styles.summaryCard}>
+                <Card.Content style={styles.summaryCardContent}>
+                  <IconButton
+                    icon="clock-outline"
+                    size={24}
+                    iconColor="#FF9800"
+                    style={styles.summaryIcon}
+                  />
+                  <Text style={styles.summaryCount}>
+                    {
+                      claims.filter(
+                        (c) => c.status?.toLowerCase() === "pending"
+                      ).length
                     }
-                  >
-                    View Details
-                  </Button>
-                  {claim.status === "Submitted" && (
+                  </Text>
+                  <Text style={styles.summaryLabel}>Pending</Text>
+                </Card.Content>
+              </Card>
+              <Card style={styles.summaryCard}>
+                <Card.Content style={styles.summaryCardContent}>
+                  <IconButton
+                    icon="check-circle-outline"
+                    size={24}
+                    iconColor="#4CAF50"
+                    style={styles.summaryIcon}
+                  />
+                  <Text style={styles.summaryCount}>
+                    {
+                      claims.filter(
+                        (c) => c.status?.toLowerCase() === "approved"
+                      ).length
+                    }
+                  </Text>
+                  <Text style={styles.summaryLabel}>Approved</Text>
+                </Card.Content>
+              </Card>
+              <Card style={styles.summaryCard}>
+                <Card.Content style={styles.summaryCardContent}>
+                  <IconButton
+                    icon="cash"
+                    size={24}
+                    iconColor="#388E3C"
+                    style={styles.summaryIcon}
+                  />
+                  <Text style={styles.summaryCount}>
+                    $
+                    {claims
+                      .filter((c) => c.status?.toLowerCase() === "approved")
+                      .reduce(
+                        (sum, claim) =>
+                          sum + parseFloat(claim.claimAmount || 0),
+                        0
+                      )
+                      .toFixed(2)}
+                  </Text>
+                  <Text style={styles.summaryLabel}>Total Paid</Text>
+                </Card.Content>
+              </Card>
+            </View>
+
+            {/* Claims List */}
+            <View style={styles.claimsList}>
+              <Text style={styles.sectionTitle}>Recent Claims</Text>
+              {claims.map((claim) => (
+                <Card key={claim.id} style={styles.claimCard}>
+                  <Card.Content>
+                    <View style={styles.cardHeader}>
+                      <View style={styles.claimInfo}>
+                        <View style={styles.claimTitleRow}>
+                          <IconButton
+                            icon="package-variant"
+                            size={20}
+                            iconColor="#388E3C"
+                            style={styles.claimIcon}
+                          />
+                          <Title style={styles.claimTitle} numberOfLines={1}>
+                            {claim.packageName}
+                          </Title>
+                        </View>
+                        <View style={styles.claimMeta}>
+                          <Text style={styles.claimDate}>
+                            {formatDate(claim.createdAt)}
+                          </Text>
+                          <Text style={styles.claimId}>
+                            ID: {claim.id.substring(0, 8)}...
+                          </Text>
+                        </View>
+                      </View>
+                      <Chip
+                        mode="outlined"
+                        icon={getStatusIcon(claim.status)}
+                        style={[
+                          styles.statusChip,
+                          {
+                            borderColor: getStatusColor(claim.status),
+                            backgroundColor:
+                              getStatusColor(claim.status) + "15",
+                          },
+                        ]}
+                        textStyle={[
+                          styles.statusChipText,
+                          { color: getStatusColor(claim.status) },
+                        ]}
+                      >
+                        {claim.status || "Unknown"}
+                      </Chip>
+                    </View>
+
+                    <View style={styles.claimDetails}>
+                      <View style={styles.amountContainer}>
+                        <Text style={styles.amountLabel}>Claim Amount</Text>
+                        <Text style={styles.amount}>
+                          {formatAmount(claim.claimAmount)}
+                        </Text>
+                      </View>
+
+                      <View style={styles.reasonContainer}>
+                        <Text style={styles.detailLabel}>Reason</Text>
+                        <Paragraph style={styles.reason} numberOfLines={2}>
+                          {claim.reason}
+                        </Paragraph>
+                      </View>
+
+                      {claim.details && (
+                        <View style={styles.detailsContainer}>
+                          <Text style={styles.detailLabel}>Details</Text>
+                          <Paragraph style={styles.details} numberOfLines={2}>
+                            {claim.details}
+                          </Paragraph>
+                        </View>
+                      )}
+
+                      {claim.images && claim.images.length > 0 && (
+                        <View style={styles.imagesContainer}>
+                          <IconButton
+                            icon="image-multiple"
+                            size={16}
+                            iconColor="#666"
+                          />
+                          <Text style={styles.imagesText}>
+                            {claim.images.length} attachment
+                            {claim.images.length > 1 ? "s" : ""}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </Card.Content>
+
+                  <Card.Actions style={styles.cardActions}>
                     <Button
+                      mode="outlined"
                       onPress={() =>
-                        navigation.navigate("TrackClaims", {
+                        navigation.navigate("ClaimDetails", {
                           claimId: claim.id,
                         })
                       }
+                      style={styles.actionButton}
+                      labelStyle={styles.actionButtonLabel}
+                      icon="eye-outline"
                     >
-                      Track
+                      View Details
                     </Button>
-                  )}
-                </Card.Actions>
-              </Card>
-            ))}
+                    {claim.status === "Submitted" && (
+                      <Button
+                        mode="contained"
+                        onPress={() =>
+                          navigation.navigate("TrackClaims", {
+                            claimId: claim.id,
+                          })
+                        }
+                        style={styles.trackButton}
+                        labelStyle={styles.trackButtonLabel}
+                        icon="map-marker-path"
+                      >
+                        Track
+                      </Button>
+                    )}
+                  </Card.Actions>
+                </Card>
+              ))}
+            </View>
           </>
         )}
       </ScrollView>
@@ -464,164 +496,330 @@ export default function ClaimHistoryScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
     flexGrow: 1,
-  },
-  backButton: {
-    alignSelf: "flex-start",
-    marginBottom: 16,
+    backgroundColor: "#F8F9FA",
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    backgroundColor: "#388E3C",
+    padding: 24,
+    paddingTop: 40,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
     marginBottom: 16,
   },
-  title: {
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
-  statusContainer: {
+  titleIcon: {
+    marginRight: 12,
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.8)",
+  },
+  newClaimButton: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  newClaimButtonLabel: {
+    color: "#388E3C",
+    fontWeight: "bold",
+    fontSize: 12,
+  },
+  statusBadges: {
     flexDirection: "row",
     gap: 8,
   },
   offlineChip: {
-    backgroundColor: "#FFE0E0",
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderColor: "#FF6B6B",
   },
-  offlineDataChip: {
-    backgroundColor: "#FFF3E0",
+  offlineChipText: {
+    color: "#FF6B6B",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  cachedChip: {
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderColor: "#FFA726",
+  },
+  cachedChipText: {
+    color: "#FFA726",
+    fontSize: 12,
+    fontWeight: "600",
   },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#F8F9FA",
   },
   loadingText: {
-    marginTop: 12,
+    marginTop: 16,
     fontSize: 16,
+    color: "#666",
+    fontWeight: "500",
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 60,
+    paddingVertical: 80,
+    paddingHorizontal: 40,
   },
-  emptyText: {
-    fontSize: 18,
+  emptyIllustration: {
+    marginBottom: 24,
+  },
+  emptyIcon: {
+    backgroundColor: "rgba(56, 142, 60, 0.1)",
+    borderRadius: 50,
+  },
+  emptyTitle: {
+    fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 8,
+    color: "#388E3C",
+    marginBottom: 12,
+    textAlign: "center",
   },
   emptySubtext: {
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 32,
     color: "#666",
+    lineHeight: 20,
+    fontSize: 14,
   },
   submitButton: {
-    marginTop: 10,
+    backgroundColor: "#388E3C",
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    elevation: 4,
+    shadowColor: "#388E3C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  submitButtonLabel: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+    fontSize: 14,
   },
   offlineBanner: {
     backgroundColor: "#FFF3E0",
+    marginHorizontal: 16,
     marginBottom: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: "#FFA726",
   },
   offlineBannerContent: {
-    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  offlineBannerIcon: {
+    marginRight: 8,
   },
   offlineBannerText: {
     color: "#E65100",
-    textAlign: "center",
     fontSize: 12,
+    fontWeight: "500",
+    flex: 1,
+  },
+  summaryCards: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    marginBottom: 24,
+    gap: 12,
+  },
+  summaryCard: {
+    flex: 1,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  summaryCardContent: {
+    alignItems: "center",
+    paddingVertical: 16,
+  },
+  summaryIcon: {
+    margin: 0,
+    marginBottom: 8,
+  },
+  summaryCount: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#388E3C",
+    marginBottom: 4,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: "#666",
+    fontWeight: "500",
+  },
+  claimsList: {
+    paddingHorizontal: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 16,
   },
   claimCard: {
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
     marginBottom: 16,
-    elevation: 2,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    overflow: "hidden",
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 8,
+    marginBottom: 16,
   },
-  claimTitle: {
+  claimInfo: {
     flex: 1,
-    marginRight: 8,
-    fontSize: 18,
+    marginRight: 12,
   },
-  statusChip: {
-    borderWidth: 0,
-  },
-  amount: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#2E7D32",
-    marginBottom: 8,
-  },
-  reason: {
+  claimTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 4,
   },
-  details: {
-    marginBottom: 8,
-    color: "#666",
+  claimIcon: {
+    margin: 0,
+    marginRight: 8,
+    backgroundColor: "rgba(56, 142, 60, 0.1)",
   },
-  label: {
+  claimTitle: {
+    fontSize: 18,
     fontWeight: "bold",
     color: "#333",
+    flex: 1,
   },
-  metaContainer: {
+  claimMeta: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  claimDate: {
+    fontSize: 12,
+    color: "#666",
+  },
+  claimId: {
+    fontSize: 12,
+    color: "#999",
+  },
+  statusChip: {
+    height: 32,
+    borderWidth: 1.5,
+  },
+  statusChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  claimDetails: {
+    gap: 12,
+  },
+  amountContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 8,
+    backgroundColor: "rgba(56, 142, 60, 0.05)",
+    padding: 12,
+    borderRadius: 8,
   },
-  date: {
-    fontSize: 12,
-    color: "#888",
-  },
-  imageChip: {
-    height: 24,
-  },
-  // Debug styles
-  debugCard: {
-    backgroundColor: "#f5f5f5",
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: "#2196F3",
-  },
-  debugTitle: {
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  debugGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 12,
-  },
-  debugItem: {
-    minWidth: "45%",
-  },
-  debugLabel: {
-    fontSize: 12,
-    fontWeight: "bold",
-    marginBottom: 4,
+  amountLabel: {
+    fontSize: 14,
     color: "#666",
+    fontWeight: "500",
   },
-  debugValue: {
-    fontSize: 12,
+  amount: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#388E3C",
+  },
+  reasonContainer: {
+    marginBottom: 4,
+  },
+  detailsContainer: {
+    marginBottom: 4,
+  },
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: "600",
     color: "#333",
+    marginBottom: 4,
   },
-  testButtons: {
+  reason: {
+    fontSize: 14,
+    color: "#666",
+    lineHeight: 20,
+  },
+  details: {
+    fontSize: 14,
+    color: "#666",
+    lineHeight: 20,
+  },
+  imagesContainer: {
     flexDirection: "row",
-    gap: 8,
+    alignItems: "center",
   },
-  testButton: {
-    flex: 1,
+  imagesText: {
+    fontSize: 12,
+    color: "#666",
+    marginLeft: -8,
   },
-  onlineChip: {
-    backgroundColor: "#4CAF50",
+  cardActions: {
+    justifyContent: "flex-end",
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
-  cachedChip: {
-    backgroundColor: "#FFF3E0",
+  actionButton: {
+    borderColor: "#388E3C",
+    borderRadius: 8,
   },
-  liveChip: {
-    backgroundColor: "#E3F2FD",
+  actionButtonLabel: {
+    color: "#388E3C",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  trackButton: {
+    backgroundColor: "#388E3C",
+    borderRadius: 8,
+  },
+  trackButtonLabel: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
   },
 });
