@@ -13,20 +13,21 @@ import Layout from "../components/Layout";
 import CustomAlert from "../components/Alert";
 import { useAlert } from "../context/AlertContext";
 import * as Location from "expo-location";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import NetInfo from "@react-native-community/netinfo";
 
 export default function DashboardScreen({ navigation }) {
   const { alert } = useAlert();
   const [weatherAlerts, setWeatherAlerts] = useState([]);
   const [location, setLocation] = useState(null);
+  const [locationName, setLocationName] = useState("Unknown");
   const [loading, setLoading] = useState(true);
   const [riskLevel, setRiskLevel] = useState("Low");
 
-  // Get user location
   useEffect(() => {
     getLocation();
   }, []);
 
-  // Fetch weather data when location is available
   useEffect(() => {
     if (location) {
       fetchWeatherAlerts();
@@ -41,54 +42,80 @@ export default function DashboardScreen({ navigation }) {
           "Permission denied",
           "Location permission is required for weather alerts"
         );
+        useOfflineData();
         setLoading(false);
         return;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
-      setLocation(location.coords);
+      let coords = await Location.getCurrentPositionAsync({});
+      setLocation(coords.coords);
+
+      //  location
+      const place = await Location.reverseGeocodeAsync(coords.coords);
+      if (place.length > 0) {
+        const { city, district, region } = place[0];
+        setLocationName(city || district || region || "Unknown");
+      }
     } catch (error) {
       console.error("Error getting location:", error);
+      useOfflineData();
       setLoading(false);
     }
   };
 
   const fetchWeatherAlerts = async () => {
     try {
+      setLoading(true);
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        showAlert(
+          "error",
+          "Offline",
+          "No internet connection. Displaying last available data."
+        );
+        await useOfflineData();
+        return;
+      }
+
       if (!location) return;
 
-      // Using OpenWeatherMap API (free tier)
-      const API_KEY = "91acab86fb9cf5fc98b300303ba64f40"; // Get free API key from openweathermap.org
+      const API_KEY = "91acab86fb9cf5fc98b300303ba64f40";
       const { latitude, longitude } = location;
 
-      // Current weather data
       const weatherResponse = await fetch(
         `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`
       );
       const weatherData = await weatherResponse.json();
-      console.log(weatherData);
-      // Weather alerts (if available)
+
       const oneCallResponse = await fetch(
         `https://api.openweathermap.org/data/2.5/onecall?lat=${latitude}&lon=${longitude}&exclude=minutely,hourly&appid=${API_KEY}&units=metric`
       );
       const oneCallData = await oneCallResponse.json();
 
       processWeatherData(weatherData, oneCallData);
+      // Save latest data offline
+      await AsyncStorage.setItem(
+        "weatherAlerts",
+        JSON.stringify(weatherAlerts)
+      );
+      await AsyncStorage.setItem("locationName", locationName);
     } catch (error) {
+      showAlert(
+        "error",
+        "Error",
+        "Failed to fetch weather data. Check your connection."
+      );
       console.error("Error fetching weather data:", error);
-      // Fallback to mock data if API fails
-      useMockWeatherData();
+      await useOfflineData();
     } finally {
       setLoading(false);
     }
   };
 
   const processWeatherData = (weatherData, oneCallData) => {
-    console.log(weatherData);
     const alerts = [];
     let risk = "Low";
 
-    // Check for severe weather conditions
     if (weatherData.weather[0].main === "Thunderstorm") {
       alerts.push({
         type: "severe",
@@ -101,7 +128,6 @@ export default function DashboardScreen({ navigation }) {
     }
 
     if (weatherData.wind.speed > 8) {
-      // > 30 km/h
       alerts.push({
         type: "wind",
         title: "💨 High Wind Alert",
@@ -110,7 +136,7 @@ export default function DashboardScreen({ navigation }) {
         )} km/h) expected. Protect sensitive crops.`,
         severity: "moderate",
       });
-      risk = risk === "Low" ? "Moderate" : risk;
+      if (risk !== "High") risk = "Moderate";
     }
 
     if (weatherData.main.temp < 5) {
@@ -120,7 +146,7 @@ export default function DashboardScreen({ navigation }) {
         message: "Low temperatures expected. Protect crops from frost damage.",
         severity: "moderate",
       });
-      risk = risk === "Low" ? "Moderate" : risk;
+      if (risk === "Low") risk = "Moderate";
     }
 
     if (weatherData.main.temp > 35) {
@@ -130,7 +156,7 @@ export default function DashboardScreen({ navigation }) {
         message: "Extreme heat expected. Ensure proper irrigation for crops.",
         severity: "moderate",
       });
-      risk = risk === "Low" ? "Moderate" : risk;
+      if (risk === "Low") risk = "Moderate";
     }
 
     if (weatherData.rain && weatherData.rain["1h"] > 10) {
@@ -140,10 +166,9 @@ export default function DashboardScreen({ navigation }) {
         message: "Heavy rainfall expected. Check drainage systems.",
         severity: "moderate",
       });
-      risk = risk === "Low" ? "Moderate" : risk;
+      if (risk === "Low") risk = "Moderate";
     }
 
-    // Check for alerts from onecall API
     if (oneCallData.alerts) {
       oneCallData.alerts.forEach((alert) => {
         alerts.push({
@@ -156,14 +181,13 @@ export default function DashboardScreen({ navigation }) {
       });
     }
 
-    // If no specific alerts, provide general weather info
     if (alerts.length === 0) {
       alerts.push({
         type: "info",
-        title: "✅ Weather Conditions",
+        title: "Weather Conditions",
         message: `Current weather: ${
           weatherData.weather[0].description
-        }. Temperature: ${Math.round(weatherData.main.temp)}°C`,
+        }. Temp: ${Math.round(weatherData.main.temp)}°C`,
         severity: "low",
       });
     }
@@ -172,27 +196,19 @@ export default function DashboardScreen({ navigation }) {
     setRiskLevel(risk);
   };
 
-  const useMockWeatherData = () => {
-    // Mock data for demonstration
-    const mockAlerts = [
-      {
-        type: "wind",
-        title: "💨 High Wind Alert",
-        message:
-          "Strong winds expected tomorrow. Secure farm equipment and protect sensitive crops.",
-        severity: "moderate",
-      },
-      {
-        type: "rain",
-        title: "🌧️ Rainfall Expected",
-        message:
-          "Moderate rainfall forecasted for the next 2 days. Good for irrigation.",
-        severity: "low",
-      },
-    ];
+  const useOfflineData = async () => {
+    try {
+      const storedAlerts = await AsyncStorage.getItem("weatherAlerts");
+      const storedLocation = await AsyncStorage.getItem("locationName");
 
-    setWeatherAlerts(mockAlerts);
-    setRiskLevel("Moderate");
+      if (storedAlerts) setWeatherAlerts(JSON.parse(storedAlerts));
+      if (storedLocation) setLocationName(storedLocation);
+      setRiskLevel("Moderate");
+    } catch (error) {
+      console.error("Error loading offline data:", error);
+      setWeatherAlerts([]);
+      setLocationName("Unknown");
+    }
   };
 
   const getRiskColor = (level) => {
@@ -243,7 +259,7 @@ export default function DashboardScreen({ navigation }) {
   return (
     <Layout navigation={navigation}>
       <ScrollView contentContainerStyle={styles.container}>
-        {/* ---------- RISK METER ---------- */}
+        {/* RISK METER */}
         <View style={styles.card}>
           <MaterialCommunityIcons
             name="speedometer"
@@ -259,96 +275,41 @@ export default function DashboardScreen({ navigation }) {
           </Text>
         </View>
 
-        {/* ---------- WEATHER ALERTS ---------- */}
-        {weatherAlerts.length > 0 ? (
+        {/* WEATHER ALERTS */}
+        {weatherAlerts.length > 0 &&
           weatherAlerts.map((alert, index) => (
             <TouchableOpacity
               key={index}
-              onPress={() => {
-                Alert.alert(alert.title, alert.message, [{ text: "OK" }]);
-              }}
+              onPress={() =>
+                Alert.alert(alert.title, alert.message, [{ text: "OK" }])
+              }
             >
               <LinearGradient
                 colors={getAlertGradient(alert.severity)}
                 style={[styles.card, styles.alertCard]}
               >
-                <Text style={styles.alertIcon}>{getAlertIcon(alert.type)}</Text>
+                
                 <View style={styles.alertContent}>
-                  <Text style={styles.alertTitle}>{alert.title}</Text>
+                  <Text style={styles.alertTitle}><Text style={styles.alertIcon}>{getAlertIcon(alert.type)}</Text>{alert.title}</Text>
                   <Text style={styles.alertText}>{alert.message}</Text>
                 </View>
                 <AntDesign name="right" size={16} color="white" />
               </LinearGradient>
             </TouchableOpacity>
-          ))
-        ) : (
-          <LinearGradient
-            colors={["#2196F3", "#1976D2"]}
-            style={[styles.card, styles.alertCard]}
-          >
-            <Text style={styles.alertTitle}>🌤️ Loading Weather Data</Text>
-            <Text style={styles.alertText}>
-              Fetching current weather conditions and alerts...
-            </Text>
-          </LinearGradient>
-        )}
+          ))}
 
-        {/* ---------- WEATHER SUMMARY ---------- */}
-        {location && (
-          <View style={[styles.card, styles.weatherCard]}>
-            <Text style={styles.weatherTitle}>📍 Current Location</Text>
-            <Text style={styles.weatherText}>
-              Latitude: {location.latitude.toFixed(4)}
-            </Text>
-            <Text style={styles.weatherText}>
-              Longitude: {location.longitude.toFixed(4)}
-            </Text>
-            <TouchableOpacity
-              style={styles.refreshButton}
-              onPress={fetchWeatherAlerts}
-              disabled={loading}
-            >
-              <Text style={styles.refreshText}>
-                {loading ? "Refreshing..." : "Refresh Alerts"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* ---------- SUBMIT CLAIM ---------- */}
-        <TouchableOpacity
-          style={[styles.card, styles.claimCard]}
-          onPress={() => navigation.navigate("claimCreate")}
-        >
-          <AntDesign name="form" size={40} color="white" />
-          <Text style={[styles.cardTitle, { color: "white" }]}>
-            Submit Claim
-          </Text>
-          <Text style={[styles.cardValue, { color: "white" }]}>
-            Report crop or farm damages
-          </Text>
-        </TouchableOpacity>
-
-        {/* ---------- QUICK ACTIONS ---------- */}
-        <View style={styles.actionsRow}>
+        {/* LOCATION */}
+        <View style={[styles.card, styles.weatherCard]}>
+          <Text style={styles.weatherTitle}>📍 Current Location</Text>
+          <Text style={styles.weatherText}>{locationName}</Text>
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: "#E3F2FD" }]}
-            onPress={() => navigation.navigate("ClaimHistory")}
+            style={styles.refreshButton}
+            onPress={fetchWeatherAlerts}
+            disabled={loading}
           >
-            <MaterialCommunityIcons name="history" size={30} color="#1976D2" />
-            <Text style={styles.actionText}>Claim History</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: "#E8F5E8" }]}
-            onPress={() => navigation.navigate("TrackClaims")}
-          >
-            <MaterialCommunityIcons
-              name="progress-clock"
-              size={30}
-              color="#388E3C"
-            />
-            <Text style={styles.actionText}>Track Claims</Text>
+            <Text style={styles.refreshText}>
+              {loading ? "Refreshing..." : "Refresh Alerts"}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -365,9 +326,7 @@ export default function DashboardScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-  },
+  container: { padding: 16 },
   card: {
     backgroundColor: "#f5f5f5",
     borderRadius: 12,
@@ -387,69 +346,34 @@ const styles = StyleSheet.create({
     color: "#333",
     textAlign: "center",
   },
-  cardValue: {
-    fontSize: 14,
-    marginTop: 5,
-    color: "#555",
-    textAlign: "center",
-  },
-  riskValue: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginTop: 5,
-  },
-  claimCard: {
-    backgroundColor: "#388E3C",
-  },
-  weatherCard: {
-    alignItems: "flex-start",
-    backgroundColor: "#E3F2FD",
-  },
+  cardValue: { fontSize: 14, marginTop: 5, color: "#555", textAlign: "center" },
+  riskValue: { fontSize: 24, fontWeight: "bold", marginTop: 5 },
+  claimCard: { backgroundColor: "#388E3C" },
+  weatherCard: { alignItems: "flex-start", backgroundColor: "#E3F2FD" },
   weatherTitle: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#1976D2",
     marginBottom: 8,
   },
-  weatherText: {
-    fontSize: 14,
-    color: "#333",
-    marginBottom: 4,
-  },
-  alertCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-  },
-  alertIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  alertContent: {
-    flex: 1,
-  },
+  weatherText: { fontSize: 14, color: "#333", marginBottom: 4 },
+  alertCard: { flexDirection: "row", alignItems: "center", padding: 16 },
+  alertIcon: { fontSize: 14, marginRight: 12 },
+  alertContent: { flex: 1 },
   alertTitle: {
     fontSize: 16,
     fontWeight: "bold",
     color: "white",
     marginBottom: 4,
   },
-  alertText: {
-    fontSize: 14,
-    color: "white",
-    lineHeight: 18,
-  },
+  alertText: { fontSize: 14, color: "white", lineHeight: 18 },
   refreshButton: {
     marginTop: 12,
     padding: 8,
     backgroundColor: "#1976D2",
     borderRadius: 6,
   },
-  refreshText: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
+  refreshText: { color: "white", fontSize: 14, fontWeight: "bold" },
   actionsRow: {
     flexDirection: "row",
     justifyContent: "space-between",

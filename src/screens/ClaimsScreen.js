@@ -4,6 +4,7 @@ import { Card, Title, Paragraph, Button, Text, Chip } from "react-native-paper";
 import Layout from "../components/Layout";
 
 const { width } = Dimensions.get("window");
+const cardWidth = width * 0.85; // 85% of screen width
 
 export default function ClaimsScreen({ navigation }) {
   const features = [
@@ -16,7 +17,6 @@ export default function ClaimsScreen({ navigation }) {
       route: "claimCreate",
       buttonText: "Submit Claim",
       color: "#388E3C",
-      gradient: ["#4CAF50", "#388E3C"],
       stats: "Quick & Easy",
     },
     {
@@ -28,20 +28,7 @@ export default function ClaimsScreen({ navigation }) {
       route: "ClaimHistory",
       buttonText: "View History",
       color: "#2196F3",
-      gradient: ["#42A5F5", "#2196F3"],
       stats: "Complete Overview",
-    },
-    {
-      id: 3,
-      title: "Track Claims",
-      description:
-        "Real-time tracking of your submitted claims with status updates",
-      icon: "progress-clock",
-      route: "TrackClaims",
-      buttonText: "Track Now",
-      color: "#FF9800",
-      gradient: ["#FFB74D", "#FF9800"],
-      stats: "Live Updates",
     },
   ];
 
@@ -81,33 +68,35 @@ export default function ClaimsScreen({ navigation }) {
 
         {/* Features Grid */}
         <View style={styles.featuresGrid}>
-          {features.map((feature, index) => (
+          {features.map((feature) => (
             <Card
               key={feature.id}
               style={[styles.featureCard, { borderLeftColor: feature.color }]}
               onPress={() => navigation.navigate(feature.route)}
             >
               <Card.Content style={styles.cardContent}>
-                {/* Icon Badge */}
-                <View
-                  style={[
-                    styles.iconContainer,
-                    { backgroundColor: feature.color + "20" },
-                  ]}
-                >
-                  <Text style={[styles.icon, { color: feature.color }]}>
-                    {getFeatureIcon(feature.icon)}
-                  </Text>
-                </View>
+                <View style={styles.iconRow}>
+                  {/* Icon */}
+                  <View
+                    style={[
+                      styles.iconContainer,
+                      { backgroundColor: feature.color + "20" },
+                    ]}
+                  >
+                    <Text style={[styles.icon, { color: feature.color }]}>
+                      {getFeatureIcon(feature.icon)}
+                    </Text>
+                  </View>
 
-                {/* Feature Stats Chip */}
-                <Chip
-                  mode="outlined"
-                  style={[styles.statsChip, { borderColor: feature.color }]}
-                  textStyle={[styles.statsChipText, { color: feature.color }]}
-                >
-                  {feature.stats}
-                </Chip>
+                  {/* Stats next to icon */}
+                  <Chip
+                    mode="outlined"
+                    style={[styles.statsChip, { borderColor: feature.color }]}
+                    textStyle={[styles.statsChipText, { color: feature.color }]}
+                  >
+                    {feature.stats}
+                  </Chip>
+                </View>
 
                 {/* Content */}
                 <Title style={styles.cardTitle}>{feature.title}</Title>
@@ -141,44 +130,15 @@ export default function ClaimsScreen({ navigation }) {
             </Card>
           ))}
         </View>
-
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <Text style={styles.quickActionsTitle}>Need Help?</Text>
-          <View style={styles.helpButtons}>
-            <Button
-              mode="outlined"
-              onPress={() => navigation.navigate("Help")}
-              style={styles.helpButton}
-              labelStyle={styles.helpButtonLabel}
-              icon="help-circle"
-            >
-              Help Center
-            </Button>
-            <Button
-              mode="outlined"
-              onPress={() => navigation.navigate("Contact")}
-              style={styles.helpButton}
-              labelStyle={styles.helpButtonLabel}
-              icon="headset"
-            >
-              Contact Support
-            </Button>
-          </View>
-        </View>
       </ScrollView>
     </Layout>
   );
 }
 
-// Helper function for icons (using text as placeholder - replace with actual icon components if needed)
 const getFeatureIcon = (iconName) => {
   const icons = {
     "plus-circle": "+",
     history: "📋",
-    "progress-clock": "⏱️",
-    "help-circle": "?",
-    headset: "🎧",
   };
   return icons[iconName] || "●";
 };
@@ -191,14 +151,14 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#388E3C",
-    padding: 24,
-    paddingTop: 40,
+    padding: 20,
+    paddingTop: 30, // reduced top space
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     marginBottom: 24,
   },
   headerContent: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   welcomeText: {
     fontSize: 16,
@@ -207,10 +167,10 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   appName: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "bold",
     color: "#FFFFFF",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
@@ -246,9 +206,10 @@ const styles = StyleSheet.create({
   },
   featuresGrid: {
     paddingHorizontal: 16,
-    gap: 16,
   },
   featureCard: {
+    width: cardWidth,
+    alignSelf: "center",
     borderRadius: 20,
     backgroundColor: "#FFFFFF",
     elevation: 6,
@@ -258,27 +219,31 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     overflow: "hidden",
     borderLeftWidth: 4,
+    marginBottom: 16,
   },
   cardContent: {
-    padding: 24,
+    padding: 16,
     position: "relative",
     zIndex: 2,
   },
-  iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-    justifyContent: "center",
+  iconRow: {
+    flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
+    gap: 12,
+  },
+  iconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
   icon: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "bold",
   },
   statsChip: {
-    alignSelf: "flex-start",
-    marginBottom: 16,
     height: 28,
   },
   statsChipText: {
@@ -286,16 +251,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   cardTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#1A1A1A",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   cardDescription: {
     fontSize: 14,
     color: "#666",
     lineHeight: 20,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   actionButton: {
     borderRadius: 12,
@@ -320,31 +285,5 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     zIndex: 1,
-  },
-  quickActions: {
-    paddingHorizontal: 16,
-    marginTop: 8,
-  },
-  quickActionsTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  helpButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  helpButton: {
-    flex: 1,
-    borderColor: "#388E3C",
-    borderRadius: 12,
-    borderWidth: 1.5,
-  },
-  helpButtonLabel: {
-    color: "#388E3C",
-    fontWeight: "600",
-    fontSize: 12,
   },
 });
