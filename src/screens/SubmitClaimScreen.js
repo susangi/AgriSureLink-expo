@@ -289,7 +289,7 @@ export default function SubmitClaimScreen({ route, navigation }) {
       await addDoc(collection(db, "claims"), claimData);
       Alert.alert("Success", "Claim submitted successfully!");
       resetForm();
-      navigation.goBack();
+      navigation.navigate("Claims");
     } catch (error) {
       Alert.alert("Error", "Failed to submit claim: " + error.message);
     }
@@ -320,12 +320,12 @@ export default function SubmitClaimScreen({ route, navigation }) {
         { text: "Stay", style: "cancel" },
         {
           text: "Discard",
-          onPress: () => navigation.goBack(),
+          onPress: () => navigation.navigate("Claims"),
           style: "destructive",
         },
       ]);
     } else {
-      navigation.goBack();
+      navigation.navigate("Claims");
     }
   };
 
@@ -528,7 +528,7 @@ export default function SubmitClaimScreen({ route, navigation }) {
               <View>
                 <Button
                   mode="outlined"
-                  onPress={() => navigation.navigate("MapPicker")}
+                  onPress={() => navigation.navigate("MapPicker", { location })}
                   style={styles.locationButton}
                   icon="map-marker"
                   textColor="#388E3C"
