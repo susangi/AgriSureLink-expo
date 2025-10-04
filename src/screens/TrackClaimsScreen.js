@@ -749,8 +749,10 @@ You can check the status anytime through the app.`;
                       Back
                     </Button>
                     <Button
+                      mode="outlined" // Add this
                       onPress={() => showShareOptions(claim)}
                       style={styles.shareButton}
+                      labelStyle={styles.shareButtonLabel} // Add this
                       icon="share-variant"
                     >
                       Share Status
@@ -779,7 +781,9 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginBottom: 16,
     backgroundColor: "#fff",
-    color: "#388E3C",
+  },
+  shareButtonLabel: {
+    color: "#388E3C", // Set the text color
   },
   header: {
     flexDirection: "row",

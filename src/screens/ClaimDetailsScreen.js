@@ -72,12 +72,12 @@ export default function ClaimDetailsScreen({ route, navigation }) {
           setClaim(processedClaim);
         } else {
           Alert.alert("Not Found", "Claim does not exist.");
-          navigation.goBack();
+          navigation.navigate("ClaimHistory");
         }
       } catch (error) {
         console.error("Error fetching claim:", error);
         Alert.alert("Error", "Failed to fetch claim details.");
-        navigation.goBack();
+        navigation.navigate("ClaimHistory");
       } finally {
         setLoading(false);
       }
@@ -166,7 +166,7 @@ export default function ClaimDetailsScreen({ route, navigation }) {
           <Text>Claim not found</Text>
           <Button
             mode="contained"
-            onPress={() => navigation.goBack()}
+            onPress={() => navigation.navigate("ClaimHistory")}
             style={styles.primaryButton}
           >
             Go Back
@@ -182,7 +182,7 @@ export default function ClaimDetailsScreen({ route, navigation }) {
         {/* Back Button */}
         <Button
           mode="outlined"
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.navigate("ClaimHistory")}
           style={styles.backButton}
           icon="arrow-left"
           textColor="#388E3C"
