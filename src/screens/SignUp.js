@@ -1,68 +1,84 @@
 import React, { useState } from "react";
 import {
-  View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Image,
+  Alert,
 } from "react-native";
 import { auth } from "../services/firebase/config";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { LinearGradient } from "expo-linear-gradient";
 import CustomAlert from "../components/Alert";
 import { useAlert } from "../context/AlertContext";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import NetInfo from "@react-native-community/netinfo";
 
 export default function SignUpScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const { showAlert, alert } = useAlert();
-  
+
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email.toLowerCase());
+  };
 
   const handleSignUp = async () => {
+    const netState = await NetInfo.fetch();
+    if (!netState.isConnected) {
+      Alert.alert("No Internet", "Please check your connection and try again.");
+      return;
+    }
+
     if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
-      showAlert(
-        "warning",
-        "Missing Fields",
-        "Please enter both email, password and confirm password."
-      );
+      showAlert("warning", "Missing Fields", "Please fill all fields.");
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      showAlert("error", "Invalid Email", "Enter a valid email address.");
+      return;
+    }
+
+    if (password.length < 6) {
+      showAlert("error", "Weak Password", "Password must be at least 6 characters.");
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("error", "Passwords do not match");
+      showAlert("error", "Password Mismatch", "Passwords do not match.");
       return;
     }
+
     try {
       await createUserWithEmailAndPassword(auth, email, password);
       showAlert("success", "Success", "Account created successfully!");
-      navigation.replace("Main"); // Go to Dashboard after signup
+      navigation.replace("Main");
     } catch (error) {
-      showAlert("error", "Error", "Invalid Credentials.");
+      showAlert("error", "Signup Failed", error.message || "Try again later.");
     }
   };
 
   return (
-    <LinearGradient
-      colors={["#3FA34D", "#00BFFF"]} // Agri Green → Sky Blue
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.container}
+    <KeyboardAwareScrollView
+      contentContainerStyle={styles.container}
+      enableOnAndroid={true}
+      extraScrollHeight={20}
     >
-      {/* Logo */}
       <Image source={require("../../assets/logo.png")} style={styles.logo} />
       <Text style={styles.title}>Create Account</Text>
       <Text style={styles.subtitle}>Join AgriSureLink today!</Text>
 
-      {/* Inputs */}
       <TextInput
         placeholder="Email"
         value={email}
         onChangeText={setEmail}
         style={styles.input}
-        placeholderTextColor="#555"
+        placeholderTextColor="#777"
+        keyboardType="email-address"
+        autoCapitalize="none"
       />
       <TextInput
         placeholder="Password"
@@ -70,7 +86,7 @@ export default function SignUpScreen({ navigation }) {
         onChangeText={setPassword}
         secureTextEntry
         style={styles.input}
-        placeholderTextColor="#555"
+        placeholderTextColor="#777"
       />
       <TextInput
         placeholder="Confirm Password"
@@ -78,70 +94,73 @@ export default function SignUpScreen({ navigation }) {
         onChangeText={setConfirmPassword}
         secureTextEntry
         style={styles.input}
-        placeholderTextColor="#555"
+        placeholderTextColor="#777"
       />
 
-      {/* Sign Up Button */}
       <TouchableOpacity style={styles.signupBtn} onPress={handleSignUp}>
         <Text style={styles.signupText}>Sign Up</Text>
       </TouchableOpacity>
 
-      {/* Redirect to Sign In */}
       <TouchableOpacity onPress={() => navigation.navigate("SignIn")}>
         <Text style={styles.signinLink}>
-          Already have an account?{" "}
-          <Text style={{ fontWeight: "bold" }}>Login</Text>
+          Already have an account? <Text style={{ fontWeight: "bold" }}>Login</Text>
         </Text>
       </TouchableOpacity>
 
       {alert && (
         <CustomAlert
-          type={alert.type} // success, error, warning
-          title={alert.title} // added
+          type={alert.type}
+          title={alert.title}
           message={alert.message}
         />
       )}
-    </LinearGradient>
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 25,
+    backgroundColor: "#fff",
   },
   logo: {
-    width: 110,
-    height: 110,
-    marginBottom: 10,
+    width: 120,
+    height: 120,
+    marginBottom: 15,
+    borderRadius: 60,
+    backgroundColor: "#fff",
+    padding: 10,
     resizeMode: "contain",
   },
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "white",
+    color: "#388E3C",
     marginBottom: 5,
   },
   subtitle: {
     fontSize: 14,
-    color: "white",
+    color: "#555",
     marginBottom: 30,
     textAlign: "center",
   },
   input: {
     width: "100%",
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: "#f5f5f5",
     padding: 14,
     borderRadius: 12,
     marginBottom: 15,
     fontSize: 16,
     color: "#212121",
+    borderWidth: 1,
+    borderColor: "#ddd",
   },
   signupBtn: {
     width: "100%",
-    backgroundColor: "#0288D1", // Sky Blue
+    backgroundColor: "#388E3C",
     padding: 15,
     borderRadius: 12,
     alignItems: "center",
@@ -154,7 +173,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   signinLink: {
-    color: "white",
+    color: "#388E3C",
     fontSize: 14,
     marginTop: 15,
   },
