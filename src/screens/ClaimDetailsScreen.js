@@ -89,7 +89,7 @@ export default function ClaimDetailsScreen({ route, navigation }) {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case "approved":
-        return "#4CAF50";
+        return "#388E3C";
       case "rejected":
         return "#F44336";
       case "pending":
@@ -152,7 +152,7 @@ export default function ClaimDetailsScreen({ route, navigation }) {
     return (
       <Layout navigation={navigation}>
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#2196F3" />
+          <ActivityIndicator size="large" color="#388E3C" />
           <Text style={{ marginTop: 12 }}>Loading claim details...</Text>
         </View>
       </Layout>
@@ -164,7 +164,11 @@ export default function ClaimDetailsScreen({ route, navigation }) {
       <Layout navigation={navigation}>
         <View style={styles.centerContainer}>
           <Text>Claim not found</Text>
-          <Button mode="contained" onPress={() => navigation.goBack()}>
+          <Button
+            mode="contained"
+            onPress={() => navigation.goBack()}
+            style={styles.primaryButton}
+          >
             Go Back
           </Button>
         </View>
@@ -175,6 +179,17 @@ export default function ClaimDetailsScreen({ route, navigation }) {
   return (
     <Layout navigation={navigation}>
       <ScrollView contentContainerStyle={styles.container}>
+        {/* Back Button */}
+        <Button
+          mode="outlined"
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+          icon="arrow-left"
+          textColor="#388E3C"
+        >
+          Back
+        </Button>
+
         {/* Main Claim Card */}
         <Card style={styles.card}>
           <Card.Content>
@@ -287,6 +302,7 @@ export default function ClaimDetailsScreen({ route, navigation }) {
                   }
                   style={styles.mapButton}
                   icon="google-maps"
+                  textColor="#388E3C"
                 >
                   Google Maps
                 </Button>
@@ -366,21 +382,13 @@ export default function ClaimDetailsScreen({ route, navigation }) {
 
         {/* Action Buttons */}
         <View style={styles.actionsContainer}>
-          <Button
-            mode="contained"
-            onPress={() => navigation.goBack()}
-            style={styles.actionButton}
-          >
-            Back to Claims
-          </Button>
-
           {claim.status === "Submitted" && (
             <Button
-              mode="outlined"
+              mode="contained"
               onPress={() =>
                 navigation.navigate("TrackClaims", { claimId: claim.id })
               }
-              style={styles.actionButton}
+              style={styles.primaryButton}
             >
               Track Claim
             </Button>
@@ -395,6 +403,11 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     flexGrow: 1,
+  },
+  backButton: {
+    alignSelf: "flex-start",
+    marginBottom: 16,
+    borderColor: "#388E3C",
   },
   card: {
     marginBottom: 16,
@@ -418,7 +431,7 @@ const styles = StyleSheet.create({
   amount: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#2E7D32",
+    color: "#388E3C",
     marginBottom: 8,
   },
   sectionTitle: {
@@ -480,14 +493,20 @@ const styles = StyleSheet.create({
   },
   mapButton: {
     flex: 1,
+    borderColor: "#388E3C",
   },
   actionsContainer: {
     flexDirection: "row",
     gap: 8,
     marginTop: 8,
   },
-  actionButton: {
+  primaryButton: {
     flex: 1,
+    backgroundColor: "#388E3C",
+  },
+  secondaryButton: {
+    flex: 1,
+    borderColor: "#388E3C",
   },
   centerContainer: {
     flex: 1,

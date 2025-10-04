@@ -289,7 +289,7 @@ export default function SubmitClaimScreen({ route, navigation }) {
       await addDoc(collection(db, "claims"), claimData);
       Alert.alert("Success", "Claim submitted successfully!");
       resetForm();
-      navigation.navigate("Claims");
+      navigation.navigate("ClaimHistory");
     } catch (error) {
       Alert.alert("Error", "Failed to submit claim: " + error.message);
     }
@@ -320,12 +320,12 @@ export default function SubmitClaimScreen({ route, navigation }) {
         { text: "Stay", style: "cancel" },
         {
           text: "Discard",
-          onPress: () => navigation.navigate("Claims"),
+          onPress: () => navigation.navigate("ClaimHistory"),
           style: "destructive",
         },
       ]);
     } else {
-      navigation.navigate("Claims");
+      navigation.navigate("ClaimHistory");
     }
   };
 

@@ -7,7 +7,6 @@ import {
   RefreshControl,
   Share,
   Linking,
-  Platform,
 } from "react-native";
 import {
   Card,
@@ -18,7 +17,6 @@ import {
   ActivityIndicator,
   Text,
   ProgressBar,
-  Menu,
 } from "react-native-paper";
 import { collection, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db, auth } from "../services/firebase/config";
@@ -34,11 +32,9 @@ export default function TrackClaimsScreen({ navigation, route }) {
   const [refreshing, setRefreshing] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [offlineData, setOfflineData] = useState(false);
-  const [menuVisible, setMenuVisible] = useState(false);
 
   const claimId = route.params?.claimId;
 
-  // Check network status
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
       setIsOnline(state.isConnected);
@@ -74,7 +70,6 @@ export default function TrackClaimsScreen({ navigation, route }) {
     }
   };
 
-  // Share functionality
   const shareClaimStatus = async (claim) => {
     try {
       const statusText = getStatusText(claim.status);
@@ -117,7 +112,6 @@ You can check the status anytime through the app.`;
     }
   };
 
-  // Share via WhatsApp
   const shareViaWhatsApp = async (claim) => {
     try {
       const statusText = getStatusText(claim.status);
@@ -149,7 +143,6 @@ You can check the status anytime through the app.`;
     }
   };
 
-  // Share via SMS
   const shareViaSMS = async (claim) => {
     try {
       const statusText = getStatusText(claim.status);
@@ -177,7 +170,6 @@ You can check the status anytime through the app.`;
     }
   };
 
-  // Share via Email
   const shareViaEmail = async (claim) => {
     try {
       const statusText = getStatusText(claim.status);
@@ -210,7 +202,6 @@ You can check the status anytime through the app.`;
     }
   };
 
-  // Show share options menu
   const showShareOptions = (claim) => {
     Alert.alert(
       "Share Claim Status",
@@ -240,7 +231,6 @@ You can check the status anytime through the app.`;
     );
   };
 
-  // Helper functions for share content
   const getStatusText = (status) => {
     switch (status?.toLowerCase()) {
       case "approved":
@@ -340,7 +330,7 @@ You can check the status anytime through the app.`;
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case "approved":
-        return "#4CAF50";
+        return "#388E3C";
       case "rejected":
         return "#F44336";
       case "pending":
@@ -412,7 +402,6 @@ You can check the status anytime through the app.`;
       }
 
       if (isOnline) {
-        // If specific claim ID is provided, track that claim
         if (claimId) {
           const claimDoc = doc(db, "claims", claimId);
           const unsubscribe = onSnapshot(claimDoc, (docSnapshot) => {
@@ -424,7 +413,6 @@ You can check the status anytime through the app.`;
                   docSnapshot.data().createdAt?.toDate?.() || new Date(),
               };
 
-              // Check if user owns this claim
               if (claimData.userId === auth.currentUser.uid) {
                 setTrackingClaims([claimData]);
                 saveTrackingDataToStorage([claimData]);
@@ -450,7 +438,6 @@ You can check the status anytime through the app.`;
             }
           };
         } else {
-          // Fetch all user's claims with status "submitted", "under_review", "documents_requested", or "processing"
           const claimsQuery = collection(db, "claims");
           const unsubscribe = onSnapshot(claimsQuery, (querySnapshot) => {
             const claimsData = [];
@@ -461,7 +448,6 @@ You can check the status anytime through the app.`;
                 createdAt: doc.data().createdAt?.toDate?.() || new Date(),
               };
 
-              // Only include user's claims that are in progress
               if (
                 claim.userId === auth.currentUser.uid &&
                 [
@@ -475,7 +461,6 @@ You can check the status anytime through the app.`;
               }
             });
 
-            // Sort by creation date
             const sortedClaims = claimsData.sort(
               (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
             );
@@ -493,7 +478,6 @@ You can check the status anytime through the app.`;
           }
         }
       } else {
-        // Offline mode
         await loadOfflineTrackingData();
         setLoading(false);
         setRefreshing(false);
@@ -562,10 +546,6 @@ You can check the status anytime through the app.`;
           />
         }
       >
-        <Button mode="contained" onPress={() => navigation.goBack()}>
-          Back
-        </Button>
-        {/* Header */}
         <View style={styles.header}>
           <Title style={styles.title}>Track Claims</Title>
           <View style={styles.statusContainer}>
@@ -668,7 +648,6 @@ You can check the status anytime through the app.`;
                       {claim.reason}
                     </Paragraph>
 
-                    {/* Progress Bar */}
                     <View style={styles.progressSection}>
                       <View style={styles.progressHeader}>
                         <Text style={styles.progressLabel}>Claim Progress</Text>
@@ -683,7 +662,6 @@ You can check the status anytime through the app.`;
                       />
                     </View>
 
-                    {/* Status Steps */}
                     <View style={styles.stepsContainer}>
                       {statusSteps.map((step, index) => (
                         <View key={index} style={styles.stepItem}>
@@ -713,7 +691,6 @@ You can check the status anytime through the app.`;
                       ))}
                     </View>
 
-                    {/* Status Description */}
                     <Card style={styles.infoCard}>
                       <Card.Content>
                         <Title style={styles.infoTitle}>Current Status</Title>
@@ -764,18 +741,16 @@ You can check the status anytime through the app.`;
 
                   <Card.Actions>
                     <Button
-                      onPress={() =>
-                        navigation.navigate("ClaimDetails", {
-                          claimId: claim.id,
-                        })
-                      }
-                      textColor="#388E3C"
+                      mode="contained"
+                      onPress={() => navigation.goBack()}
+                      style={styles.backButton}
+                      buttonColor="#388E3C"
                     >
-                      View Details
+                      Back
                     </Button>
                     <Button
                       onPress={() => showShareOptions(claim)}
-                      textColor="#388E3C"
+                      style={styles.shareButton}
                       icon="share-variant"
                     >
                       Share Status
@@ -799,7 +774,12 @@ const styles = StyleSheet.create({
   backButton: {
     alignSelf: "flex-start",
     marginBottom: 16,
-    borderColor: "#388E3C",
+  },
+  shareButton: {
+    alignSelf: "flex-start",
+    marginBottom: 16,
+    backgroundColor: "#fff",
+    color: "#388E3C",
   },
   header: {
     flexDirection: "row",
@@ -885,7 +865,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
     fontSize: 20,
-    color: "#2E7D32",
+    color: "#388E3C",
   },
   statusChip: {
     borderWidth: 1,
@@ -904,7 +884,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#333",
   },
-  // Progress Section
   progressSection: {
     marginBottom: 20,
   },
@@ -929,7 +908,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: "#E0E0E0",
   },
-  // Steps
   stepsContainer: {
     marginBottom: 20,
   },
@@ -968,7 +946,6 @@ const styles = StyleSheet.create({
   stepLineCompleted: {
     backgroundColor: "#388E3C",
   },
-  // Info Card
   infoCard: {
     backgroundColor: "#F1F8E9",
     marginBottom: 16,
