@@ -14,6 +14,8 @@ import ProfileScreen from "./src/screens/ProfileScreen";
 import ClaimHistoryScreen from "./src/screens/ClaimHistoryScreen";
 import TrackClaimsScreen from "./src/screens/TrackClaimsScreen";
 import ClaimDetailsScreen from "./src/screens/ClaimDetailsScreen";
+import MapPicker from "./src/components/MapPicker";
+
 import { AlertProvider } from "./src/context/AlertContext";
 import { UserProvider } from "./src/context/UserContext";
 import { Provider as PaperProvider } from "react-native-paper";
@@ -56,11 +58,16 @@ export default function App() {
         <UserProvider>
           <NavigationContainer theme={AppTheme}>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
+              {/* Auth Screens */}
               <Stack.Screen name="SignIn" component={AuthScreen} />
               <Stack.Screen name="SignUp" component={SignUpScreen} />
-              {/* Tabs grouped under Main */}
+
+              {/* Main App Tabs */}
               <Stack.Screen name="Main" component={MainTabs} />
+
+              {/* Claim Screens */}
               <Stack.Screen name="claimCreate" component={SubmitClaimScreen} />
+              <Stack.Screen name="MapPicker" component={MapPicker} />
               <Stack.Screen
                 name="ClaimHistory"
                 component={ClaimHistoryScreen}
