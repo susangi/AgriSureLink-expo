@@ -1,5 +1,12 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Modal,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "../context/UserContext";
 import { useAlert } from "../context/AlertContext";
@@ -9,6 +16,7 @@ import { auth } from "../services/firebase/config";
 export default function Layout({ navigation, children }) {
   const { user, setUser } = useUser();
   const { showAlert } = useAlert();
+  const [userMenuVisible, setUserMenuVisible] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -16,6 +24,7 @@ export default function Layout({ navigation, children }) {
       setUser(null);
       showAlert("success", "Logout", "You have been logged out successfully.");
       navigation.replace("SignIn");
+      setUserMenuVisible(false);
     } catch (error) {
       showAlert("error", "Logout Failed", "Something went wrong.");
     }
@@ -23,63 +32,131 @@ export default function Layout({ navigation, children }) {
 
   return (
     <View style={styles.container}>
-      {/* -------- TOP HEADER -------- */}
+      {/* -------- HEADER -------- */}
       <View style={styles.header}>
-        {/* <TouchableOpacity onPress={() => alert("Menu clicked!")}>
-          <Ionicons name="menu" size={28} color="#388E3C" />
-        </TouchableOpacity> */}
-
-        <Image source={require("../../assets/logo.png")} style={styles.logo} />
-
-        <View style={styles.headerIcons}>
-          <Text style={styles.userName}>{user?.name || "Guest"}</Text>
-          <TouchableOpacity onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={28} color="#d32f2f" />
-          </TouchableOpacity>
+        <View style={styles.logoContainer}>
+          <Image
+            source={require("../../assets/logo.png")}
+            style={styles.logo}
+          />
+          <Text style={styles.appName}>AgriSureLink</Text>
         </View>
+
+        <TouchableOpacity
+          style={styles.userIconContainer}
+          onPress={() => setUserMenuVisible(true)}
+        >
+          <Ionicons name="person-circle-outline" size={36} color="#388E3C" />
+        </TouchableOpacity>
       </View>
 
-      {/* -------- MAIN BODY -------- */}
-      <View style={styles.body}>{children}</View>
+      {/* -------- USER MENU MODAL -------- */}
+      <Modal
+        transparent
+        visible={userMenuVisible}
+        animationType="fade"
+        onRequestClose={() => setUserMenuVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPressOut={() => setUserMenuVisible(false)}
+        >
+          <View style={styles.userMenu}>
+            <Text style={styles.userEmail}>
+              {user?.email || "guest@example.com"}
+            </Text>
+            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+              <Text style={styles.logoutText}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
-      {/* -------- BOTTOM FOOTER -------- */}
-      {/* <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2025 AgriSureLink</Text>
-      </View> */}
+      {/* -------- BODY -------- */}
+      <View style={styles.body}>{children}</View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", marginTop: 10 },
+  container: { flex: 1, backgroundColor: "#fff" },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 15,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
-    position: "relative",
+    backgroundColor: "#fff",
+    marginTop: 30,
   },
+
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
   logo: {
     width: 40,
     height: 40,
+    borderRadius: 20,
     resizeMode: "contain",
-    position: "absolute",
-    left: "50%",
-    top: 0, // optional, if you want it from top
-    borderRadius: 20, // half of width/height for a perfect circle
-    transform: [{ translateX: -20 }], // centers it horizontally
   },
-  headerIcons: { flexDirection: "row", alignItems: "center", gap: 8 },
-  userName: { fontSize: 16, fontWeight: "600", color: "#333", marginRight: 5 },
-  body: { flex: 1, padding: 20 },
-  footer: {
-    padding: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
+
+  appName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#388E3C",
+  },
+
+  userIconContainer: {
     alignItems: "center",
-    backgroundColor: "#f5f5f5",
+    justifyContent: "center",
   },
-  footerText: { fontSize: 12, color: "#777" },
+
+  body: { flex: 1, padding: 20 },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.2)",
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+  },
+
+  userMenu: {
+    width: 180,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 15,
+    marginTop: 80, 
+    marginRight: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+
+  userEmail: {
+    fontSize: 14,
+    fontWeight: "500",
+    marginBottom: 10,
+    color: "#333",
+  },
+
+  logoutBtn: {
+    backgroundColor: "#d32f2f",
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: "center",
+  },
+
+  logoutText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
 });
